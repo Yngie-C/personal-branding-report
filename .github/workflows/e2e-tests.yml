@@ -1,0 +1,133 @@
+name: E2E Tests
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  e2e-test:
+    name: Playwright E2E Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_SUPABASE_PUBLISHABLE_KEY }}
+      NEXT_SUPABASE_SECRET_KEY: ${{ secrets.NEXT_SUPABASE_SECRET_KEY }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install chromium
+
+      - name: Install system dependencies for Playwright
+        run: npx playwright install-deps chromium
+
+      - name: Build Next.js application
+        run: npm run build
+        env:
+          NODE_ENV: production
+
+      - name: Run E2E tests
+        run: npm run test:e2e
+        continue-on-error: true
+        id: e2e-tests
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: tests/reports/
+          retention-days: 7
+
+      - name: Upload AI analysis reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-analysis-reports
+          path: tests/reports/ai-analysis/
+          retention-days: 14
+
+      - name: Upload failure screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: failure-screenshots
+          path: tests/reports/screenshots/
+          retention-days: 14
+
+      - name: Upload network logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: network-logs
+          path: tests/reports/network-logs/
+          retention-days: 7
+
+      - name: Comment PR with test results
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const testResults = fs.existsSync('tests/reports/test-results.json')
+              ? JSON.parse(fs.readFileSync('tests/reports/test-results.json', 'utf8'))
+              : null;
+
+            let body = '## E2E Test Results\n\n';
+
+            if (testResults) {
+              const { stats } = testResults;
+              const total = stats.expected + stats.unexpected + stats.skipped;
+              const passed = stats.expected;
+              const failed = stats.unexpected;
+              const skipped = stats.skipped;
+
+              body += `- ✅ **Passed**: ${passed}/${total}\n`;
+              body += `- ❌ **Failed**: ${failed}/${total}\n`;
+              body += `- ⏭️ **Skipped**: ${skipped}/${total}\n`;
+              body += `- 📊 **Success Rate**: ${Math.round((passed/total)*100)}%\n\n`;
+
+              if (failed > 0) {
+                body += '### Failed Tests\n';
+                // Add failed test details if available
+                body += '\nCheck [test artifacts](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details.\n';
+              }
+            } else {
+              body += '❌ Test results not available. Check [workflow logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}).\n';
+            }
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
+
+      - name: Fail workflow if tests failed
+        if: steps.e2e-tests.outcome == 'failure'
+        run: exit 1

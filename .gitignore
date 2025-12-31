@@ -1,0 +1,64 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+.yarn/install-state.gz
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# local env files
+.env*.local
+.env
+
+# MCP configuration (contains API tokens)
+.mcp.json
+
+# Claude Code configuration (contains local settings and plans)
+.claude/
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# playwright
+/playwright-report/
+/tests/reports/
+/test-results/
+/playwright/.cache/
+
+# Generated PDFs
+*.pdf
+
+# Development notes and planning docs (keep README.md and CLAUDE.md only)
+IMPLEMENTATION.md
+PHASE_ANALYSIS.md
+TODO.md
+SUPABASE_SETUP.md
+SUPABASE_KEYS_GUIDE.md
+
+# Planning documents
+1. *.md
+2. *.md
+3. *.md
