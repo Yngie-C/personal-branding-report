@@ -131,12 +131,6 @@ export default function CircularLikertScale({
               aria-label={`${score}점`}
               aria-pressed={isSelected}
             >
-              {/* 선택된 경우에만 숫자 표시 (선택 피드백) */}
-              {isSelected && (
-                <span className="text-white font-bold text-xs sm:text-sm">
-                  {score}
-                </span>
-              )}
             </button>
           );
         })}

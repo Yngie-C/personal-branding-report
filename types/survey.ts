@@ -242,6 +242,12 @@ export interface BriefAnalysis {
   shadowSides?: string;          // Potential weaknesses
   brandingKeywords: string[];    // Top 3-5 keywords
 
+  // NEW: Strength scenarios
+  strengthsScenarios?: {
+    title: string;              // Scenario title
+    description: string;        // Specific description (100-150 chars)
+  }[];
+
   // Radar chart data
   radarData: {
     category: string;

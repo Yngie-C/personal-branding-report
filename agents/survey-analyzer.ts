@@ -21,8 +21,11 @@ export class SurveyAnalyzerAgent extends BaseAgent<SurveyResponse, BriefAnalysis
       `PSA 설문 분석가. 60개 응답(1-7, 역질문 포함) → 5개 카테고리 강점 JSON:
 
 {
-  "strengthsSummary": "강점 분석 (2-3단락, 페르소나 반영)",
-  "shadowSides": "주의점 (1-2단락)",
+  "strengthsSummary": "3개 bullet points (각 150-200자, \\n\\n로 구분)",
+  "strengthsScenarios": [
+    {"title": "시나리오 제목", "description": "구체적 설명 (100-150자)"}
+  ],
+  "shadowSides": "보완적 스타일 (1-2단락)",
   "brandingKeywords": ["키워드1~5"]
 }
 
@@ -130,13 +133,33 @@ ${reframingContext}
       // 동적 요청 부분
       const userMessage = `
 위 PSA 분석 정보를 바탕으로:
-1. **강점 분석**: 이 사람의 핵심 강점을 2-3 단락으로 서술 (페르소나 특성과 점수를 반영)
-2. **보완적 스타일**: 낮은 점수를 "결핍"이 아닌 "일하는 스타일의 차이"로 해석 (1-2 단락)
-   - 위 "리프레이밍 가이드"를 참고하여 긍정적으로 재해석하세요
-   - "주의점"이라는 단어 대신 "보완적 스타일" 또는 "독특한 특성"으로 표현하세요
-3. **브랜딩 키워드**: 페르소나와 점수에 맞는 3-5개 키워드
 
-JSON 출력:`;
+1. **강점 분석**: 이 사람의 핵심 강점을 3개 bullet points로 구조화 (각 150-200자)
+   - 각 포인트는 하나의 독립된 강점에 집중
+   - 페르소나 특성과 점수를 구체적으로 반영
+   - 실용적이고 실행 가능한 조언 포함
+   - 3개 포인트를 "\\n\\n"(이중 줄바꿈)로 구분하여 하나의 문자열로 반환
+
+2. **강점 활용 시나리오**: 위 강점이 실전에서 빛나는 상황을 2-3개 시나리오로 작성
+   - 각 시나리오: { "title": "상황 제목", "description": "구체적 설명 (100-150자)" }
+   - 예시: "신규 프로젝트 기획 시", "팀 갈등 해결 시", "위기 상황 대응 시" 등
+   - 페르소나와 점수를 반영한 구체적인 상황 묘사
+
+3. **보완적 스타일**: 낮은 점수를 "결핍"이 아닌 "일하는 스타일의 차이"로 해석 (1-2 단락)
+   - 위 "리프레이밍 가이드"를 참고하여 긍정적으로 재해석
+   - "주의점" 대신 "함께 일하면 좋은 파트너 유형"으로 프레이밍
+
+4. **브랜딩 키워드**: 페르소나와 점수에 맞는 3-5개 키워드
+
+JSON 출력:
+{
+  "strengthsSummary": "포인트 1\\n\\n포인트 2\\n\\n포인트 3",
+  "strengthsScenarios": [
+    { "title": "시나리오 제목", "description": "설명" }
+  ],
+  "shadowSides": "보완적 스타일 텍스트",
+  "brandingKeywords": ["키워드1", "키워드2", ...]
+}`;
 
       const response = await this.callLLM(userMessage, [], {
         cacheSystem: true,        // System prompt 캐싱
@@ -180,6 +203,7 @@ JSON 출력:`;
         strengthsSummary: llmOutput.strengthsSummary,
         shadowSides: llmOutput.shadowSides,
         brandingKeywords: llmOutput.brandingKeywords,
+        strengthsScenarios: llmOutput.strengthsScenarios || [], // NEW: 강점 활용 시나리오
         radarData,
         lowScoreCategories: lowScoreReframing,  // NEW: 리프레이밍된 낮은 점수
         selectedSoulQuestions: soulQuestionIds, // NEW: 선택된 Soul Questions

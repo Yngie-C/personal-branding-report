@@ -1,11 +1,21 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from "recharts";
-import { TrendingUp, Award, AlertCircle, ArrowRight, Sparkles, Share2, Globe, Mail } from "lucide-react";
+import { TrendingUp, Award, AlertCircle, ArrowRight, Sparkles, Share2, Globe, Mail, CheckCircle, Clock, Palette, Users, Lightbulb, Lock } from "lucide-react";
 import { BriefAnalysis, CategoryLabels, SurveyAnswer } from "@/types/survey";
+import { SoulQuestion } from "@/types/soul-questions";
+import { getSoulQuestionById } from "@/lib/soul-questions/questions-bank";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 export default function SurveyResultPage() {
   const router = useRouter();
@@ -24,6 +34,26 @@ export default function SurveyResultPage() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [webProfileSlug, setWebProfileSlug] = useState<string | undefined>();
   const [webProfileUrl, setWebProfileUrl] = useState<string | undefined>();
+
+  // Waitlist state
+  const [phone, setPhone] = useState("");
+  const [showWaitlistForm, setShowWaitlistForm] = useState(false);
+  const [showWaitlistModal, setShowWaitlistModal] = useState(false);
+  const [waitlistPosition, setWaitlistPosition] = useState<number | null>(null);
+  const [waitlistSubmitting, setWaitlistSubmitting] = useState(false);
+  const [waitlistError, setWaitlistError] = useState("");
+
+  // Copy feedback state
+  const [copiedMessage, setCopiedMessage] = useState<string>("");
+
+  // Load Soul Questions for preview
+  const soulQuestions = useMemo(() => {
+    if (!analysis?.selectedSoulQuestions) return [];
+    return analysis.selectedSoulQuestions
+      .slice(0, 3)  // Only show first 3 questions as preview
+      .map(id => getSoulQuestionById(id))
+      .filter((q): q is SoulQuestion => q !== undefined);
+  }, [analysis?.selectedSoulQuestions]);
 
   // Load analysis from localStorage on mount
   useEffect(() => {
@@ -88,8 +118,9 @@ export default function SurveyResultPage() {
       setSessionId(newSessionId);
 
       // Update web profile info
+      const profileUrl = result.data.webProfileUrl;
       setWebProfileSlug(result.data.webProfileSlug);
-      setWebProfileUrl(result.data.webProfileUrl);
+      setWebProfileUrl(profileUrl);
 
       // Clear temporary data from localStorage
       localStorage.removeItem("survey-analysis");
@@ -97,7 +128,7 @@ export default function SurveyResultPage() {
       localStorage.removeItem("survey-question-order");
       localStorage.removeItem("survey-seed");
 
-      // Hide email form (show success state)
+      // Hide email form
       setShowEmailForm(false);
 
       console.log("Session created and data saved:", newSessionId);
@@ -107,6 +138,205 @@ export default function SurveyResultPage() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleWaitlistSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // Get email from form (may be newly entered or pre-filled)
+    const formData = new FormData(e.target as HTMLFormElement);
+    const submittedEmail = formData.get('email') as string || email;
+
+    if (!submittedEmail || !submittedEmail.includes('@')) {
+      setWaitlistError('유효한 이메일을 입력해주세요.');
+      return;
+    }
+
+    setWaitlistSubmitting(true);
+    setWaitlistError("");
+
+    try {
+      let currentSessionId = sessionId;
+
+      // If no session exists, create one first
+      if (!currentSessionId) {
+        if (!analysis || !answers || answers.length !== 60) {
+          setWaitlistError('설문 데이터가 유효하지 않습니다.');
+          setWaitlistSubmitting(false);
+          return;
+        }
+
+        const sessionResponse = await fetch("/api/survey/save-with-email", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: submittedEmail,
+            answers,
+            analysis,
+          }),
+        });
+
+        const sessionResult = await sessionResponse.json();
+
+        if (!sessionResponse.ok) {
+          throw new Error(sessionResult.error || "세션 생성에 실패했습니다.");
+        }
+
+        currentSessionId = sessionResult.data.sessionId;
+        setSessionId(currentSessionId);
+        setEmail(submittedEmail);
+        localStorage.setItem("sessionId", currentSessionId);
+
+        // Update web profile info
+        setWebProfileSlug(sessionResult.data.webProfileSlug);
+        setWebProfileUrl(sessionResult.data.webProfileUrl);
+
+        // Clear temporary data
+        localStorage.removeItem("survey-analysis");
+        localStorage.removeItem("survey-answers");
+        localStorage.removeItem("survey-question-order");
+        localStorage.removeItem("survey-seed");
+      }
+
+      // Now register to waitlist
+      const waitlistResponse = await fetch("/api/waitlist/join", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: submittedEmail,
+          phone: phone || null,
+          sessionId: currentSessionId,
+        }),
+      });
+
+      const waitlistResult = await waitlistResponse.json();
+
+      if (!waitlistResponse.ok) {
+        throw new Error(waitlistResult.error || "대기자 명단 등록에 실패했습니다.");
+      }
+
+      // Update email state if it was newly collected
+      if (!email) {
+        setEmail(submittedEmail);
+      }
+
+      // Show success modal
+      setWaitlistPosition(waitlistResult.data.position);
+      setShowWaitlistForm(false);
+      setShowWaitlistModal(true);
+
+      console.log("Waitlist registration successful:", waitlistResult.data);
+    } catch (err: any) {
+      console.error("Waitlist submission error:", err);
+      setWaitlistError(err.message);
+    } finally {
+      setWaitlistSubmitting(false);
+    }
+  };
+
+  const handleShareResultUrl = async () => {
+    // If no webProfileUrl, create anonymous session first
+    if (!webProfileUrl) {
+      if (!analysis || !answers || answers.length !== 60) {
+        setCopiedMessage("❌ 설문 데이터를 찾을 수 없습니다.");
+        setTimeout(() => setCopiedMessage(""), 3000);
+        return;
+      }
+
+      setCopiedMessage("🔄 웹 프로필 링크를 생성하는 중...");
+
+      try {
+        // Create anonymous session with temporary email
+        const anonymousEmail = `anonymous-${Date.now()}@temp.local`;
+
+        const response = await fetch("/api/survey/save-with-email", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: anonymousEmail,
+            answers,
+            analysis,
+          }),
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.error || "세션 생성에 실패했습니다.");
+        }
+
+        // Save session data
+        const newSessionId = result.data.sessionId;
+        const profileUrl = result.data.webProfileUrl;
+
+        localStorage.setItem("sessionId", newSessionId);
+        setSessionId(newSessionId);
+        setWebProfileSlug(result.data.webProfileSlug);
+        setWebProfileUrl(profileUrl);
+
+        // Clear temporary data
+        localStorage.removeItem("survey-analysis");
+        localStorage.removeItem("survey-answers");
+        localStorage.removeItem("survey-question-order");
+        localStorage.removeItem("survey-seed");
+
+        // Copy the generated link
+        const fullUrl = `${window.location.origin}${profileUrl}`;
+        await navigator.clipboard.writeText(fullUrl);
+        setCopiedMessage("✅ 내 결과 링크가 생성되고 복사되었습니다!");
+        setTimeout(() => setCopiedMessage(""), 3000);
+
+      } catch (error: any) {
+        console.error("Anonymous session creation error:", error);
+        setCopiedMessage("❌ 링크 생성에 실패했습니다. 다시 시도해주세요.");
+        setTimeout(() => setCopiedMessage(""), 5000);
+      }
+      return;
+    }
+
+    // If webProfileUrl already exists, just copy it
+    const fullUrl = `${window.location.origin}${webProfileUrl}`;
+
+    try {
+      await navigator.clipboard.writeText(fullUrl);
+      setCopiedMessage("✅ 내 결과 링크가 복사되었습니다!");
+      setTimeout(() => setCopiedMessage(""), 3000);
+    } catch (error) {
+      setCopiedMessage("❌ 링크 복사에 실패했습니다. 다시 시도해주세요.");
+      setTimeout(() => setCopiedMessage(""), 5000);
+    }
+  };
+
+  const handleShareLandingUrl = async () => {
+    const landingUrl = `${window.location.origin}/?utm_source=psa_result&utm_medium=share_button&utm_campaign=user_referral`;
+
+    try {
+      await navigator.clipboard.writeText(landingUrl);
+      setCopiedMessage("✅ PSA 설문 링크가 복사되었습니다!");
+      setTimeout(() => setCopiedMessage(""), 3000);
+    } catch (error) {
+      setCopiedMessage("❌ 링크 복사에 실패했습니다. 다시 시도해주세요.");
+      setTimeout(() => setCopiedMessage(""), 5000);
+    }
+  };
+
+  // Format completion time
+  const formatCompletionTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}분 ${secs}초 소요`;
+  };
+
+  // Get category icon
+  const getCategoryIcon = (category: string) => {
+    const icons: Record<string, string> = {
+      innovation: '💡',
+      execution: '⚡',
+      influence: '📣',
+      collaboration: '🤝',
+      resilience: '🌱',
+    };
+    return icons[category] || '✨';
   };
 
   if (!analysis) {
@@ -125,16 +355,27 @@ export default function SurveyResultPage() {
       {/* Hero Section - Persona Card */}
       <section className="pt-20 pb-12 px-6">
         <div className="max-w-4xl mx-auto text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full text-purple-100 text-sm mb-6">
-            <Sparkles className="w-4 h-4" />
-            <span>PSA 강점 진단 완료</span>
+          <div className="flex flex-wrap items-center justify-center gap-3 mb-6">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full text-purple-100 text-sm">
+              <Sparkles className="w-4 h-4" />
+              <span>PSA 강점 진단 완료</span>
+            </div>
+
+            {analysis.completionTimeSeconds && (
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full text-purple-100 text-sm">
+                <Clock className="w-4 h-4" />
+                <span>{formatCompletionTime(analysis.completionTimeSeconds)}</span>
+                {analysis.completionTimeSeconds < 300 && <span className="ml-2">⚡</span>}
+                {analysis.completionTimeSeconds > 600 && <span className="ml-2">🤔</span>}
+              </div>
+            )}
           </div>
 
-          <h1 className="text-5xl md:text-6xl font-bold text-white mb-4">
+          <h1 className="text-4xl md:text-6xl font-bold text-white mb-4">
             {analysis.persona.title}
           </h1>
 
-          <p className="text-xl md:text-2xl text-purple-100 mb-8 font-light">
+          <p className="text-lg md:text-2xl text-purple-100 mb-8 font-light">
             {analysis.persona.tagline}
           </p>
 
@@ -197,70 +438,148 @@ export default function SurveyResultPage() {
 
       {/* Main Content */}
       <section className="pb-20 px-6">
-        <div className="max-w-4xl mx-auto space-y-8">
-          {/* Radar Chart */}
+        <div className="max-w-4xl mx-auto space-y-12 md:space-y-16">
+          {/* Hybrid Chart Layout: Radar + Progress Bars */}
           <div className="bg-white rounded-2xl shadow-2xl p-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">
+            <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-purple-900 to-indigo-900 mb-6 text-center">
               5차원 강점 프로필
             </h2>
 
-            <ResponsiveContainer width="100%" height={400}>
-              <RadarChart data={analysis.radarData}>
-                <PolarGrid stroke="#e5e7eb" />
-                <PolarAngleAxis
-                  dataKey="category"
-                  tick={{ fill: '#334e68', fontSize: 14, fontWeight: 500 }}
-                />
-                <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fill: '#94a3b8' }} />
-                <Radar
-                  name="점수"
-                  dataKey="score"
-                  stroke="#486581"
-                  fill="#486581"
-                  fillOpacity={0.6}
-                  strokeWidth={2}
-                />
-              </RadarChart>
-            </ResponsiveContainer>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Left: Radar Chart */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">전체 프로필</h3>
+                <ResponsiveContainer width="100%" height={350}>
+                  <RadarChart data={analysis.radarData}>
+                    <defs>
+                      <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.8} />
+                        <stop offset="100%" stopColor="#6366f1" stopOpacity={0.3} />
+                      </linearGradient>
+                    </defs>
+                    <PolarGrid stroke="#e5e7eb" strokeWidth={1.5} />
+                    <PolarAngleAxis
+                      dataKey="category"
+                      tick={{ fill: '#334e68', fontSize: 12, fontWeight: 600 }}
+                    />
+                    <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fill: '#94a3b8' }} />
+                    <Radar
+                      name="점수"
+                      dataKey="score"
+                      stroke="#8b5cf6"
+                      fill="url(#colorScore)"
+                      strokeWidth={3}
+                      dot={{ fill: '#8b5cf6', r: 5 }}
+                    />
+                  </RadarChart>
+                </ResponsiveContainer>
+              </div>
 
-            <div className="grid grid-cols-5 gap-3 mt-6">
-              {analysis.categoryScores
-                .sort((a, b) => b.normalizedScore - a.normalizedScore)
-                .map((score) => (
-                  <div key={score.category} className="text-center">
-                    <div className="text-xs text-gray-600 mb-1">
-                      {CategoryLabels[score.category]}
-                    </div>
-                    <div className="text-lg font-bold text-navy-600">
-                      {Math.round(score.normalizedScore)}
-                    </div>
-                  </div>
-                ))}
+              {/* Right: Progress Bars */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">카테고리별 순위</h3>
+                <div className="space-y-4">
+                  {analysis.categoryScores
+                    .sort((a, b) => b.normalizedScore - a.normalizedScore)
+                    .map((cat, i) => (
+                      <div key={cat.category}>
+                        <div className="flex justify-between items-center mb-2">
+                          <div className="flex items-center gap-2">
+                            <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white ${
+                              i === 0 ? 'bg-green-500' : i === 1 ? 'bg-blue-500' : 'bg-purple-400'
+                            }`}>
+                              {i + 1}
+                            </span>
+                            <span className="font-medium text-gray-900">
+                              {CategoryLabels[cat.category]}
+                            </span>
+                          </div>
+                          <span className="text-lg font-bold text-gray-900">
+                            {Math.round(cat.normalizedScore)}
+                          </span>
+                        </div>
+                        <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full transition-all duration-500 ${
+                              i === 0 ? 'bg-green-500' : i === 1 ? 'bg-blue-500' : 'bg-purple-400'
+                            }`}
+                            style={{ width: `${cat.normalizedScore}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
             </div>
           </div>
 
+          {/* Soul Questions Preview */}
+          {soulQuestions.length > 0 && (
+            <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-2xl p-8 border border-purple-200">
+              <div className="flex items-center gap-3 mb-4">
+                <Sparkles className="w-6 h-6 text-purple-600" />
+                <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-purple-900 to-indigo-900">
+                  당신만의 성장 질문 프리뷰
+                </h2>
+              </div>
+              <p className="text-gray-700 mb-6 leading-relaxed">
+                PSA 분석 결과를 바탕으로 선택된 9개 질문입니다.
+                정식 브랜딩 리포트에서 자세히 답변하실 수 있습니다.
+              </p>
+
+              <div className="space-y-4">
+                {soulQuestions.map((q, i) => (
+                  <div key={q.id} className="bg-white rounded-xl p-5 border-l-4 border-purple-500 shadow-md hover:shadow-lg transition-shadow">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs font-medium">
+                        {q.category}
+                      </span>
+                      <span className="text-purple-600 text-sm font-medium">질문 {i + 1}/9</span>
+                    </div>
+                    <p className="text-gray-900 font-semibold mb-2 text-lg">{q.question}</p>
+                    <p className="text-sm text-gray-600 italic">{q.hint}</p>
+                  </div>
+                ))}
+
+                {/* Remaining 6 questions locked CTA */}
+                <div className="bg-purple-100 rounded-xl p-6 text-center border border-purple-300">
+                  <Lock className="w-6 h-6 mx-auto mb-3 text-purple-600" />
+                  <p className="text-sm text-purple-800 font-medium mb-2">
+                    나머지 6개 질문은 정식 리포트에서 확인하세요
+                  </p>
+                  <p className="text-xs text-purple-600">
+                    대기자 명단에 등록하여 출시 알림을 받으실 수 있습니다.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Persona Description */}
           <div className="bg-white rounded-2xl shadow-2xl p-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">
+            <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-purple-900 to-indigo-900 mb-4">
               페르소나 특성
             </h2>
-            <p className="text-gray-700 leading-relaxed text-lg">
+            <p className="text-gray-800 leading-relaxed text-lg">
               {analysis.persona.description}
             </p>
           </div>
 
           {/* Strengths Summary */}
           <div className="bg-white rounded-2xl shadow-2xl p-8">
-            <div className="flex items-center gap-2 mb-4">
-              <Award className="w-6 h-6 text-navy-600" />
-              <h2 className="text-2xl font-bold text-gray-900">
+            <div className="flex items-center gap-3 mb-4">
+              <Award className="w-6 h-6 text-purple-600" />
+              <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-purple-900 to-indigo-900">
                 강점 분석
               </h2>
             </div>
-            <div className="prose prose-lg max-w-none">
-              <p className="text-gray-700 leading-relaxed whitespace-pre-line">
-                {analysis.strengthsSummary}
-              </p>
+            <div className="space-y-4">
+              {analysis.strengthsSummary.split('\n\n').map((paragraph, i) => (
+                <div key={i} className="flex items-start gap-3">
+                  <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-1" />
+                  <p className="text-gray-800 leading-relaxed">{paragraph}</p>
+                </div>
+              ))}
             </div>
 
             {/* Core Strengths */}
@@ -279,50 +598,74 @@ export default function SurveyResultPage() {
             </div>
           </div>
 
-          {/* Working Styles */}
-          {analysis.lowScoreCategories && analysis.lowScoreCategories.length > 0 && (
+          {/* Strengths Scenarios */}
+          {analysis.strengthsScenarios && analysis.strengthsScenarios.length > 0 && (
             <div className="bg-white rounded-2xl shadow-2xl p-8">
-              <div className="flex items-center gap-2 mb-4">
-                <Sparkles className="w-6 h-6 text-purple-600" />
-                <h2 className="text-2xl font-bold text-gray-900">
-                  일하는 스타일
+              <div className="flex items-center gap-3 mb-4">
+                <Lightbulb className="w-6 h-6 text-amber-500" />
+                <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-amber-900 to-orange-900">
+                  이런 상황에서 강점이 빛납니다
                 </h2>
               </div>
-              <p className="text-gray-600 mb-6 text-sm">
-                모든 역량이 높을 필요는 없습니다. 낮은 점수는 "결핍"이 아닌 "당신만의 독특한 일하는 방식"을 나타냅니다.
-              </p>
 
-              <div className="space-y-4">
-                {analysis.lowScoreCategories.map((item, index) => (
-                  <div key={index} className="bg-slate-50 rounded-xl p-5 border border-slate-200">
-                    <div className="flex items-start gap-3">
-                      <div className="flex-shrink-0 w-2 h-2 rounded-full bg-purple-500 mt-2" />
-                      <div className="flex-1">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                          {item.reframedLabel}
-                        </h3>
-                        <p className="text-gray-700 leading-relaxed">
-                          {item.reframedDescription}
-                        </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {analysis.strengthsScenarios.map((scenario, i) => (
+                  <div key={i} className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-5 border border-amber-200">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-8 h-8 bg-amber-500 text-white rounded-full flex items-center justify-center font-bold text-sm">
+                        {i + 1}
                       </div>
+                      <h3 className="font-semibold text-gray-900">{scenario.title}</h3>
                     </div>
+                    <p className="text-gray-700 text-sm leading-relaxed">{scenario.description}</p>
                   </div>
                 ))}
               </div>
             </div>
           )}
 
+          {/* Working Styles - Always visible */}
+          <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl p-8 border border-blue-200">
+            <div className="flex items-center gap-3 mb-4">
+              <Palette className="w-6 h-6 text-blue-600" />
+              <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-900 to-cyan-900">
+                나만의 일하는 스타일
+              </h2>
+            </div>
+            <p className="text-gray-700 mb-6 leading-relaxed">
+              낮은 점수는 결핍이 아니라 당신만의 독특한 스타일입니다.
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {analysis.lowScoreCategories?.map((item) => (
+                <div key={item.category} className="bg-white rounded-xl p-5 shadow-md">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                      <span className="text-lg">{getCategoryIcon(item.category)}</span>
+                    </div>
+                    <h3 className="font-semibold text-gray-900">{item.reframedLabel}</h3>
+                  </div>
+                  <p className="text-sm text-gray-700 leading-relaxed">
+                    {item.reframedDescription}
+                  </p>
+                </div>
+              )) || (
+                <p className="text-gray-600 col-span-2">모든 카테고리에서 균형잡힌 점수를 보이고 있습니다.</p>
+              )}
+            </div>
+          </div>
+
           {/* Complementary Style */}
           {analysis.shadowSides && (
             <div className="bg-white rounded-2xl shadow-2xl p-8">
-              <div className="flex items-center gap-2 mb-4">
-                <AlertCircle className="w-6 h-6 text-slate-500" />
-                <h2 className="text-2xl font-bold text-gray-900">
-                  보완적 스타일
+              <div className="flex items-center gap-3 mb-4">
+                <Users className="w-6 h-6 text-indigo-600" />
+                <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-indigo-900 to-purple-900">
+                  함께 일하면 시너지 나는 파트너
                 </h2>
               </div>
-              <p className="text-gray-700 leading-relaxed whitespace-pre-line">
-                {analysis.shadowSides}
+              <p className="text-gray-800 leading-relaxed whitespace-pre-line">
+                {analysis.shadowSides || '이런 동료와 협업하면 당신의 강점이 더욱 빛납니다.'}
               </p>
 
               {analysis.persona.shadowSides.length > 0 && (
@@ -343,134 +686,208 @@ export default function SurveyResultPage() {
             </div>
           )}
 
-          {/* EMAIL FORM SECTION - Show if no sessionId yet */}
-          {!sessionId && (
-            <div className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-2xl shadow-2xl p-8 text-center">
-              <div className="max-w-2xl mx-auto">
-                <Mail className="w-16 h-16 text-white mx-auto mb-4" />
-                <h2 className="text-3xl font-bold text-white mb-3">
-                  이 분석 결과를 저장하고 공유하세요
-                </h2>
-                <p className="text-purple-100 mb-6 text-lg">
-                  이메일을 입력하면 웹 프로필 링크가 생성되어
-                  <br />
-                  언제든지 결과를 확인하고 공유할 수 있습니다.
-                </p>
+          {/* 2X2 CTA GRID - Always visible */}
+          <div className="bg-white rounded-2xl shadow-2xl p-8">
+            {/* Section Header */}
+            <div className="text-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                이 분석 결과를 활용하세요
+              </h2>
+              <p className="text-gray-600 text-sm">
+                웹 프로필을 공유하거나 정식 서비스 출시 알림을 받으세요
+              </p>
+            </div>
 
-                {!showEmailForm ? (
-                  <Button
-                    onClick={() => setShowEmailForm(true)}
-                    size="lg"
-                    className="bg-white text-purple-600 hover:bg-slate-50 px-8 py-6 text-lg font-semibold"
-                  >
-                    이메일 입력하기
-                    <ArrowRight className="w-5 h-5 ml-2" />
-                  </Button>
-                ) : (
-                  <form onSubmit={handleEmailSubmit} className="space-y-4">
+            {/* Grid Container */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              {/* Row 1, Col 1: Share Result URL */}
+              <Button
+                onClick={handleShareResultUrl}
+                className="h-24 flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white transition-all hover:scale-105"
+              >
+                <Share2 className="w-6 h-6" />
+                <span className="font-semibold">내 결과 공유하기</span>
+                <span className="text-xs opacity-90">
+                  {webProfileUrl ? '웹 프로필 링크 복사' : '클릭하여 링크 생성'}
+                </span>
+              </Button>
+
+              {/* Row 1, Col 2: Share Landing Page */}
+              <Button
+                onClick={handleShareLandingUrl}
+                className="h-24 flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white transition-all hover:scale-105"
+              >
+                <Globe className="w-6 h-6" />
+                <span className="font-semibold">진단 테스트 공유하기</span>
+                <span className="text-xs opacity-90">PSA 설문 링크 복사</span>
+              </Button>
+
+              {/* Row 2, Full Width: Waitlist Registration */}
+              <Button
+                onClick={() => setShowWaitlistForm(true)}
+                className="h-24 md:col-span-2 flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white transition-all hover:scale-105"
+              >
+                <Sparkles className="w-6 h-6" />
+                <span className="text-lg font-bold">대기자 명단 등록하기</span>
+                <span className="text-xs opacity-90">
+                  이력서 기반 심층 분석 정식 출시 시 우선 연락
+                </span>
+              </Button>
+            </div>
+
+            {/* Inline Feedback Message */}
+            {copiedMessage && (
+              <div className={`p-3 border rounded-lg text-center text-sm ${
+                copiedMessage.startsWith('✅')
+                  ? 'bg-green-50 border-green-200 text-green-700'
+                  : 'bg-red-50 border-red-200 text-red-700'
+              }`}>
+                {copiedMessage}
+              </div>
+            )}
+          </div>
+
+          {/* WAITLIST FORM MODAL - Show when user clicks "대기자 명단 등록하기" */}
+          {showWaitlistForm && (
+            <Dialog open={showWaitlistForm} onOpenChange={setShowWaitlistForm}>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle className="text-center text-2xl">
+                    대기자 명단 등록
+                  </DialogTitle>
+                  <DialogDescription className="text-center">
+                    정식 서비스 출시 시 우선적으로 연락드리겠습니다
+                  </DialogDescription>
+                </DialogHeader>
+
+                <form onSubmit={handleWaitlistSubmit} className="space-y-4 py-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      이메일 {!email && <span className="text-red-500">*</span>}
+                    </label>
                     <input
                       type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="your@email.com"
-                      required
-                      className="w-full max-w-md px-6 py-4 border-2 border-white rounded-lg focus:ring-4 focus:ring-white/30 focus:border-white text-lg mx-auto block text-gray-900"
+                      name="email"
+                      defaultValue={email}
+                      readOnly={!!email}
+                      required={!email}
+                      className={`w-full px-4 py-3 border border-gray-300 rounded-lg ${
+                        email
+                          ? 'bg-gray-50 text-gray-600'
+                          : 'focus:ring-2 focus:ring-purple-500 focus:border-transparent'
+                      }`}
+                      placeholder={!email ? "your@email.com" : ""}
                     />
-
-                    {error && (
-                      <div className="p-4 bg-red-100 border border-red-300 rounded-lg">
-                        <p className="text-sm text-red-700">{error}</p>
-                      </div>
+                    {!email && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        분석 결과 저장 및 연락을 위해 필요합니다
+                      </p>
                     )}
+                  </div>
 
-                    <div className="flex gap-3 justify-center">
-                      <Button
-                        type="button"
-                        onClick={() => setShowEmailForm(false)}
-                        variant="outline"
-                        className="bg-white/20 text-white border-white hover:bg-white/30"
-                      >
-                        취소
-                      </Button>
-                      <Button
-                        type="submit"
-                        disabled={submitting || !email}
-                        className="bg-white text-purple-600 hover:bg-slate-50 px-8"
-                      >
-                        {submitting ? "저장 중..." : "저장하고 계속하기"}
-                      </Button>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      휴대폰 번호 (선택사항)
+                    </label>
+                    <input
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="010-1234-5678"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      SMS로 빠른 알림을 받으실 수 있습니다
+                    </p>
+                  </div>
+
+                  {waitlistError && (
+                    <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                      <p className="text-sm text-red-700">{waitlistError}</p>
                     </div>
-                  </form>
-                )}
-              </div>
-            </div>
+                  )}
+
+                  <DialogFooter className="gap-2">
+                    <Button
+                      type="button"
+                      onClick={() => {
+                        setShowWaitlistForm(false);
+                        setWaitlistError("");
+                        setPhone("");
+                      }}
+                      variant="outline"
+                    >
+                      취소
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={waitlistSubmitting}
+                      className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
+                    >
+                      {waitlistSubmitting ? "등록 중..." : "등록하기"}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
           )}
 
-          {/* WEB PROFILE SHARE SECTION - Show after email submitted */}
-          {sessionId && webProfileSlug && webProfileUrl && (
-            <div className="bg-white rounded-2xl shadow-2xl p-8 text-center">
-              <div className="flex items-center justify-center mb-4">
-                <Globe className="w-8 h-8 text-navy-600 mr-3" />
-                <h2 className="text-2xl font-bold text-gray-900">
-                  이 분석 결과를 공유하세요
-                </h2>
-              </div>
-              <p className="text-gray-600 mb-6">
-                웹 프로필로 당신의 강점을 세상에 알리세요
-              </p>
+          {/* WAITLIST SUCCESS MODAL - Show after registration */}
+          {showWaitlistModal && waitlistPosition && (
+            <Dialog open={showWaitlistModal} onOpenChange={setShowWaitlistModal}>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle className="text-center text-2xl mb-2">
+                    🎉 대기자 명단 등록 완료!
+                  </DialogTitle>
+                  <DialogDescription className="text-center text-base">
+                    정식 서비스 출시 시 우선적으로 연락드리겠습니다
+                  </DialogDescription>
+                </DialogHeader>
 
-              <div className="flex items-center gap-3 justify-center mb-4">
-                <input
-                  type="text"
-                  readOnly
-                  value={typeof window !== 'undefined' ? `${window.location.origin}${webProfileUrl}` : webProfileUrl}
-                  className="flex-1 max-w-md px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-sm font-mono"
-                />
-                <Button
-                  onClick={() => {
-                    if (typeof window !== 'undefined') {
-                      navigator.clipboard.writeText(`${window.location.origin}${webProfileUrl}`);
-                      alert('링크가 복사되었습니다!');
-                    }
-                  }}
-                  variant="outline"
-                  className="flex-shrink-0"
-                >
-                  <Share2 className="w-4 h-4 mr-2" />
-                  링크 복사
-                </Button>
-              </div>
+                <div className="py-6">
+                  <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-xl p-6 text-center mb-4">
+                    <p className="text-sm text-gray-600 mb-2">대기 순번</p>
+                    <p className="text-5xl font-bold text-purple-600 mb-2">
+                      {waitlistPosition}
+                    </p>
+                    <p className="text-sm text-gray-500">번째 고객님</p>
+                  </div>
 
-              <Button
-                onClick={() => window.open(webProfileUrl, '_blank')}
-                className="bg-navy-600 hover:bg-navy-700"
-              >
-                <Globe className="w-4 h-4 mr-2" />
-                웹 프로필 보기
-              </Button>
-            </div>
+                  <div className="space-y-3 text-sm text-gray-700">
+                    <div className="flex items-start gap-2">
+                      <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <span className="text-green-600 text-xs">✓</span>
+                      </div>
+                      <p>PSA 분석 결과가 저장되었습니다</p>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <span className="text-green-600 text-xs">✓</span>
+                      </div>
+                      <p>웹 프로필이 생성되었습니다</p>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <div className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <span className="text-blue-600 text-xs">📧</span>
+                      </div>
+                      <p>정식 출시 시 <strong>{email}</strong>로 연락드립니다</p>
+                    </div>
+                  </div>
+                </div>
+
+                <DialogFooter className="sm:justify-center">
+                  <Button
+                    onClick={() => setShowWaitlistModal(false)}
+                    className="w-full bg-purple-600 hover:bg-purple-700"
+                  >
+                    확인
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           )}
 
-          {/* CTA Section - Continue to Upload */}
-          {sessionId && (
-            <div className="bg-navy-600 hover:bg-navy-700 transition-colors rounded-2xl shadow-2xl p-8 text-center cursor-pointer" onClick={() => router.push('/upload')}>
-              <h2 className="text-3xl font-bold text-white mb-3">
-                이제 이력서와 포트폴리오를 업로드하세요
-              </h2>
-              <p className="text-slate-100 mb-6 text-lg">
-                PSA 분석 결과를 바탕으로 AI가 이력서를 분석하여
-                <br />
-                당신만의 맞춤형 질문을 생성합니다.
-              </p>
-              <Button
-                size="lg"
-                className="bg-white text-navy-600 hover:bg-slate-50 px-8 py-6 text-lg font-semibold"
-              >
-                이력서 업로드하기
-                <ArrowRight className="w-5 h-5 ml-2" />
-              </Button>
-            </div>
-          )}
         </div>
       </section>
     </main>
