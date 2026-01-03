@@ -327,32 +327,32 @@ export default function SurveyPage() {
 
         {/* Pagination Navigation */}
         <div className="flex flex-col gap-4 max-w-2xl mx-auto">
-          <div className="flex items-center justify-center gap-1 flex-wrap">
+          <div className="flex items-center justify-center gap-1 sm:gap-1.5 flex-wrap">
             {/* Previous Button */}
             <Button
               onClick={() => handlePageChange(currentPage - 1)}
               disabled={currentPage === 0}
               variant="outline"
-              className="px-4 bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20 disabled:opacity-30"
+              className="h-11 px-3 sm:px-4 bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20 disabled:opacity-30"
             >
-              <ChevronLeft className="w-4 h-4 mr-1" />
-              이전
+              <ChevronLeft className="w-4 h-4 sm:mr-1" />
+              <span className="hidden sm:inline">이전</span>
             </Button>
 
-            {/* Page Numbers */}
+            {/* Page Numbers - 44x44px touch target */}
             {[...Array(totalPages)].map((_, i) => (
               <Button
                 key={i}
                 onClick={() => handlePageChange(i)}
                 variant="outline"
-                className={`w-10 h-10 backdrop-blur-sm border transition-all ${
+                className={`min-w-[44px] min-h-[44px] w-11 h-11 p-0 backdrop-blur-sm border transition-all ${
                   currentPage === i
-                    ? "bg-gradient-to-r from-indigo-600 to-purple-600 border-white/30 text-white shadow-lg shadow-indigo-500/50 scale-110"
+                    ? "bg-gradient-to-r from-indigo-600 to-purple-600 border-white/30 text-white shadow-lg shadow-indigo-500/50 scale-105 sm:scale-110"
                     : "bg-white/10 border-white/20 text-slate-300 hover:bg-white/20 hover:text-white hover:border-white/40"
                 }`}
                 data-page-number={i + 1}
               >
-                {i + 1}
+                <span className="text-sm sm:text-base font-medium">{i + 1}</span>
               </Button>
             ))}
 
@@ -360,16 +360,16 @@ export default function SurveyPage() {
             {currentPage < totalPages - 1 ? (
               <Button
                 onClick={() => handlePageChange(currentPage + 1)}
-                className="px-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white border border-white/20 hover:from-indigo-500 hover:to-purple-500 shadow-lg shadow-indigo-500/40 backdrop-blur-sm"
+                className="h-11 px-3 sm:px-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white border border-white/20 hover:from-indigo-500 hover:to-purple-500 shadow-lg shadow-indigo-500/40 backdrop-blur-sm"
               >
-                다음
-                <ChevronRight className="w-4 h-4 ml-1" />
+                <span className="hidden sm:inline">다음</span>
+                <ChevronRight className="w-4 h-4 sm:ml-1" />
               </Button>
             ) : (
               <Button
                 onClick={handleSubmit}
                 disabled={!canSubmit() || submitting}
-                className="px-8 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white border border-white/20 hover:from-indigo-500 hover:to-purple-500 disabled:from-slate-700 disabled:to-slate-800 disabled:border-slate-600 shadow-lg shadow-indigo-500/50 backdrop-blur-sm"
+                className="h-11 px-6 sm:px-8 bg-gradient-to-r from-indigo-600 to-purple-600 text-white border border-white/20 hover:from-indigo-500 hover:to-purple-500 disabled:from-slate-700 disabled:to-slate-800 disabled:border-slate-600 shadow-lg shadow-indigo-500/50 backdrop-blur-sm"
               >
                 {submitting ? "분석 중..." : "결과 확인하기"}
               </Button>

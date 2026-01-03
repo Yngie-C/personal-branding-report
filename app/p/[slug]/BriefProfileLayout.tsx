@@ -46,24 +46,50 @@ export default function BriefProfileLayout({ profileData }: { profileData: any }
               <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">
                 5차원 강점 프로필
               </h2>
-              <ResponsiveContainer width="100%" height={400}>
-                <RadarChart data={profileData.radarData}>
-                  <PolarGrid stroke="#e5e7eb" />
-                  <PolarAngleAxis
-                    dataKey="category"
-                    tick={{ fill: '#4b5563', fontSize: 14, fontWeight: 500 }}
-                  />
-                  <PolarRadiusAxis angle={90} domain={[0, 100]} />
-                  <Radar
-                    name="점수"
-                    dataKey="score"
-                    stroke="#8b5cf6"
-                    fill="#8b5cf6"
-                    fillOpacity={0.6}
-                    strokeWidth={2}
-                  />
-                </RadarChart>
-              </ResponsiveContainer>
+
+              {/* Mobile Chart (280px) */}
+              <div className="block sm:hidden">
+                <ResponsiveContainer width="100%" height={280}>
+                  <RadarChart data={profileData.radarData}>
+                    <PolarGrid stroke="#e5e7eb" />
+                    <PolarAngleAxis
+                      dataKey="category"
+                      tick={{ fill: '#4b5563', fontSize: 14, fontWeight: 500 }}
+                    />
+                    <PolarRadiusAxis angle={90} domain={[0, 100]} />
+                    <Radar
+                      name="점수"
+                      dataKey="score"
+                      stroke="#8b5cf6"
+                      fill="#8b5cf6"
+                      fillOpacity={0.6}
+                      strokeWidth={2}
+                    />
+                  </RadarChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* Desktop Chart (400px) */}
+              <div className="hidden sm:block">
+                <ResponsiveContainer width="100%" height={400}>
+                  <RadarChart data={profileData.radarData}>
+                    <PolarGrid stroke="#e5e7eb" />
+                    <PolarAngleAxis
+                      dataKey="category"
+                      tick={{ fill: '#4b5563', fontSize: 14, fontWeight: 500 }}
+                    />
+                    <PolarRadiusAxis angle={90} domain={[0, 100]} />
+                    <Radar
+                      name="점수"
+                      dataKey="score"
+                      stroke="#8b5cf6"
+                      fill="#8b5cf6"
+                      fillOpacity={0.6}
+                      strokeWidth={2}
+                    />
+                  </RadarChart>
+                </ResponsiveContainer>
+              </div>
             </div>
           )}
 

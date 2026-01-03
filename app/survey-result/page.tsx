@@ -478,33 +478,68 @@ export default function SurveyResultPage() {
               {/* Left: Radar Chart */}
               <div>
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">전체 프로필</h3>
-                <ResponsiveContainer width="100%" height={350}>
-                  <RadarChart data={analysis.radarData}>
-                    <defs>
-                      <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor={theme?.chartStart || "#8b5cf6"} stopOpacity={0.8} />
-                        <stop offset="100%" stopColor={theme?.chartEnd || "#6366f1"} stopOpacity={0.3} />
-                      </linearGradient>
-                    </defs>
-                    <PolarGrid stroke="#e5e7eb" strokeWidth={1.5} />
-                    <PolarAngleAxis
-                      dataKey="category"
-                      tick={{ fill: '#334e68', fontSize: 12, fontWeight: 600 }}
-                    />
-                    <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fill: '#94a3b8' }} />
-                    <Radar
-                      name="점수"
-                      dataKey="score"
-                      stroke={theme?.chartStart || "#8b5cf6"}
-                      fill="url(#colorScore)"
-                      strokeWidth={3}
-                      dot={{ fill: theme?.chartStart || '#8b5cf6', r: 5 }}
-                      isAnimationActive={true}
-                      animationDuration={1000}
-                      animationEasing="ease-out"
-                    />
-                  </RadarChart>
-                </ResponsiveContainer>
+
+                {/* Mobile Chart (280px) */}
+                <div className="block sm:hidden">
+                  <ResponsiveContainer width="100%" height={280}>
+                    <RadarChart data={analysis.radarData}>
+                      <defs>
+                        <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor={theme?.chartStart || "#8b5cf6"} stopOpacity={0.8} />
+                          <stop offset="100%" stopColor={theme?.chartEnd || "#6366f1"} stopOpacity={0.3} />
+                        </linearGradient>
+                      </defs>
+                      <PolarGrid stroke="#e5e7eb" strokeWidth={1.5} />
+                      <PolarAngleAxis
+                        dataKey="category"
+                        tick={{ fill: '#334e68', fontSize: 12, fontWeight: 600 }}
+                      />
+                      <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fill: '#94a3b8' }} />
+                      <Radar
+                        name="점수"
+                        dataKey="score"
+                        stroke={theme?.chartStart || "#8b5cf6"}
+                        fill="url(#colorScore)"
+                        strokeWidth={3}
+                        dot={{ fill: theme?.chartStart || '#8b5cf6', r: 5 }}
+                        isAnimationActive={true}
+                        animationDuration={1000}
+                        animationEasing="ease-out"
+                      />
+                    </RadarChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* Desktop Chart (350px) */}
+                <div className="hidden sm:block">
+                  <ResponsiveContainer width="100%" height={350}>
+                    <RadarChart data={analysis.radarData}>
+                      <defs>
+                        <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor={theme?.chartStart || "#8b5cf6"} stopOpacity={0.8} />
+                          <stop offset="100%" stopColor={theme?.chartEnd || "#6366f1"} stopOpacity={0.3} />
+                        </linearGradient>
+                      </defs>
+                      <PolarGrid stroke="#e5e7eb" strokeWidth={1.5} />
+                      <PolarAngleAxis
+                        dataKey="category"
+                        tick={{ fill: '#334e68', fontSize: 12, fontWeight: 600 }}
+                      />
+                      <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fill: '#94a3b8' }} />
+                      <Radar
+                        name="점수"
+                        dataKey="score"
+                        stroke={theme?.chartStart || "#8b5cf6"}
+                        fill="url(#colorScore)"
+                        strokeWidth={3}
+                        dot={{ fill: theme?.chartStart || '#8b5cf6', r: 5 }}
+                        isAnimationActive={true}
+                        animationDuration={1000}
+                        animationEasing="ease-out"
+                      />
+                    </RadarChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
 
               {/* Right: Progress Bars */}
@@ -727,11 +762,11 @@ export default function SurveyResultPage() {
               {/* Row 1, Col 1: Share Result URL */}
               <Button
                 onClick={handleShareResultUrl}
-                className="h-24 flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white transition-all hover:scale-105"
+                className="min-h-[88px] sm:min-h-[96px] h-auto py-4 sm:py-5 flex flex-col items-center justify-center gap-1.5 sm:gap-2 bg-gradient-to-br from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white transition-all hover:scale-105"
               >
-                <Share2 className="w-6 h-6" />
-                <span className="font-semibold">내 결과 공유하기</span>
-                <span className="text-xs opacity-90">
+                <Share2 className="w-5 h-5 sm:w-6 sm:h-6" />
+                <span className="text-sm sm:text-base font-semibold text-center leading-tight">내 결과 공유하기</span>
+                <span className="text-[10px] sm:text-xs opacity-90 text-center leading-tight px-2">
                   {webProfileUrl ? '웹 프로필 링크 복사' : '클릭하여 링크 생성'}
                 </span>
               </Button>
@@ -739,21 +774,21 @@ export default function SurveyResultPage() {
               {/* Row 1, Col 2: Share Landing Page */}
               <Button
                 onClick={handleShareLandingUrl}
-                className="h-24 flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white transition-all hover:scale-105"
+                className="min-h-[88px] sm:min-h-[96px] h-auto py-4 sm:py-5 flex flex-col items-center justify-center gap-1.5 sm:gap-2 bg-gradient-to-br from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white transition-all hover:scale-105"
               >
-                <Globe className="w-6 h-6" />
-                <span className="font-semibold">진단 테스트 공유하기</span>
-                <span className="text-xs opacity-90">PSA 설문 링크 복사</span>
+                <Globe className="w-5 h-5 sm:w-6 sm:h-6" />
+                <span className="text-sm sm:text-base font-semibold text-center leading-tight">진단 테스트 공유하기</span>
+                <span className="text-[10px] sm:text-xs opacity-90 text-center leading-tight px-2">PSA 설문 링크 복사</span>
               </Button>
 
               {/* Row 2, Full Width: Waitlist Registration */}
               <Button
                 onClick={() => setShowWaitlistForm(true)}
-                className={`h-24 md:col-span-2 flex flex-col items-center justify-center gap-2 bg-gradient-to-br ${theme?.gradient || 'from-amber-600 to-orange-600'} hover:opacity-90 text-white transition-all hover:scale-105 ${theme?.shadowClass ? `shadow-lg ${theme.shadowClass}` : 'shadow-lg'}`}
+                className={`min-h-[88px] sm:min-h-[96px] h-auto py-4 sm:py-5 md:col-span-2 flex flex-col items-center justify-center gap-1.5 sm:gap-2 bg-gradient-to-br ${theme?.gradient || 'from-amber-600 to-orange-600'} hover:opacity-90 text-white transition-all hover:scale-105 ${theme?.shadowClass ? `shadow-lg ${theme.shadowClass}` : 'shadow-lg'}`}
               >
-                <Sparkles className="w-6 h-6" />
-                <span className="text-lg font-bold">대기자 명단 등록하기</span>
-                <span className="text-xs opacity-90">
+                <Sparkles className="w-5 h-5 sm:w-6 sm:h-6" />
+                <span className="text-base sm:text-lg font-bold text-center leading-tight">대기자 명단 등록하기</span>
+                <span className="text-[10px] sm:text-xs opacity-90 text-center leading-tight px-2">
                   이력서 기반 심층 분석 정식 출시 시 우선 연락
                 </span>
               </Button>
@@ -774,7 +809,7 @@ export default function SurveyResultPage() {
           {/* WAITLIST FORM MODAL - Show when user clicks "대기자 명단 등록하기" */}
           {showWaitlistForm && (
             <Dialog open={showWaitlistForm} onOpenChange={setShowWaitlistForm}>
-              <DialogContent className="sm:max-w-md bg-slate-900/95 backdrop-blur-xl border border-white/20 text-white">
+              <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-md bg-slate-900/95 backdrop-blur-xl border border-white/20 text-white">
                 <DialogHeader>
                   <DialogTitle className="text-center text-2xl text-white">
                     대기자 명단 등록

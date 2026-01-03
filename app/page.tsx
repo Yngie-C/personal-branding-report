@@ -45,24 +45,24 @@ export default function HomePage() {
         2. Main Content Layer (z-index: 10)
         ========================================
       */}
-      <div className="relative z-10 max-w-6xl mx-auto px-6 py-20">
+      <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 py-12 sm:py-20">
 
         {/* --- Hero Section --- */}
-        <div className="text-center mb-32 pt-10">
+        <div className="text-center mb-16 sm:mb-32 pt-8 sm:pt-12 md:pt-16">
           <div className="inline-block px-4 py-1.5 mb-6 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-sm font-medium backdrop-blur-md">
             ✨ AI 기반 퍼스널 브랜딩 솔루션
           </div>
-          <h1 className="text-5xl md:text-7xl font-bold mb-6 leading-tight">
+          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold mb-4 sm:mb-6 leading-tight">
             <span className="block text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-200 to-slate-400">
               3단계로 완성하는
             </span>
             당신만의 브랜드 리포트
           </h1>
-          <p className="text-xl md:text-2xl text-slate-300 mb-6 max-w-2xl mx-auto font-light leading-relaxed">
+          <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-slate-300 mb-4 sm:mb-6 max-w-2xl mx-auto font-light leading-relaxed">
             AI가 이력서와 포트폴리오를 심층 분석하여<br className="hidden md:block"/>
             전문적인 브랜딩 전략과 디자인 가이드를 제안합니다.
           </p>
-          <p className="text-lg text-indigo-400 font-medium mb-12 flex items-center justify-center gap-2">
+          <p className="text-base sm:text-lg text-indigo-400 font-medium mb-8 sm:mb-12 flex items-center justify-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse"></span>
             설문 10분 + 질문 5분 + 생성 2분 = 총 17분
           </p>
@@ -70,14 +70,14 @@ export default function HomePage() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
               href="/survey"
-              className="group relative px-10 py-4 rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-lg font-semibold hover:from-indigo-500 hover:to-purple-500 transition-all shadow-lg shadow-indigo-500/50 hover:shadow-xl hover:shadow-indigo-500/60 backdrop-blur-sm border border-white/10"
+              className="group relative px-8 sm:px-10 py-3 sm:py-4 rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-base sm:text-lg font-semibold hover:from-indigo-500 hover:to-purple-500 transition-all shadow-lg shadow-indigo-500/50 hover:shadow-xl hover:shadow-indigo-500/60 backdrop-blur-sm border border-white/10"
             >
               무료로 시작하기
               <span className="inline-block ml-2 transition-transform group-hover:translate-x-1">→</span>
             </Link>
             <Link
               href="/start"
-              className="px-10 py-4 rounded-full bg-white/5 text-white border border-white/10 hover:bg-white/10 transition-colors text-lg font-medium backdrop-blur-sm"
+              className="px-8 sm:px-10 py-3 sm:py-4 rounded-full bg-white/5 text-white border border-white/10 hover:bg-white/10 transition-colors text-base sm:text-lg font-medium backdrop-blur-sm"
             >
               더 알아보기
             </Link>
