@@ -82,9 +82,21 @@ The system uses 9 specialized agents orchestrated in a specific workflow:
 **Phase 1 (무료 티어) - PSA 설문만으로 약식 보고서 생성:**
 ```
 /api/survey/analyze
-├─ SurveyAnalyzerAgent      → BriefAnalysis (persona, scores, strengths)
+├─ SurveyAnalyzerAgent      → BriefAnalysis (템플릿 기반, <1초)
 └─ WebProfileGeneratorAgent → Public web profile (/p/[slug])
 ```
+
+**Brief Report Generation (Rule-Based Template System):**
+- **Processing:** Template-based (no LLM calls)
+- **Speed:** <1 second (vs 10-30s with AI)
+- **Cost:** $0 (vs $0.002-0.005 with AI)
+- **Content:**
+  - `strengthsSummary`: 30 pre-written templates (10 personas × 3 variants)
+  - `strengthsScenarios`: 22 scenario templates matched to top categories
+  - `shadowSides`: Generated from persona metadata + reframing
+  - `brandingKeywords`: From persona metadata
+- **Templates:** `lib/templates/persona-templates.ts`, `lib/templates/scenario-pool.ts`
+- **Selection logic:** `lib/templates/template-selector.ts` (variant: balanced/spiked/mixed)
 
 **Phase 2 (유료 티어) - OrchestratorAgent 전체 워크플로우:**
 ```

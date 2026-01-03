@@ -7,7 +7,6 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { SurveyQuestion } from "@/types/survey";
 import CircularLikertScale from "@/components/survey/CircularLikertScale";
 import { seededShuffle } from "@/lib/utils/shuffle";
-import AnalysisProgressModal from "@/components/survey/AnalysisProgressModal";
 
 interface Answers {
   [questionId: string]: number;
@@ -35,11 +34,6 @@ export default function SurveyPage() {
 
   // Track if user just answered the last question
   const [showCompletionHint, setShowCompletionHint] = useState(false);
-
-  // Analysis progress modal states
-  const [showAnalysisModal, setShowAnalysisModal] = useState(false);
-  const [analysisStep, setAnalysisStep] = useState(0);
-  const [analysisError, setAnalysisError] = useState<string | null>(null);
 
   // Load questions on mount (no sessionId required)
   useEffect(() => {
@@ -210,15 +204,8 @@ export default function SurveyPage() {
 
     setSubmitting(true);
     setError("");
-    setShowAnalysisModal(true); // Show modal immediately
-    setAnalysisStep(0); // Start at step 0
-    setAnalysisError(null);
 
     try {
-      // Step 0: Response validation (1-2s)
-      setAnalysisStep(0);
-      await new Promise(resolve => setTimeout(resolve, 500)); // UI feedback
-
       // Calculate completion time
       const completionTimeSeconds = Math.floor((new Date().getTime() - startTime.getTime()) / 1000);
 
@@ -230,13 +217,7 @@ export default function SurveyPage() {
         score: answers[q.id] || 0
       }));
 
-      // Step 1: Score calculation (2-3s) - happens in API
-      setAnalysisStep(1);
-
-      // Step 2: AI analysis (8-20s) - happens in API
-      setAnalysisStep(2);
-
-      // Call temporary analysis API (no sessionId needed)
+      // Call analysis API
       const analyzeResponse = await fetch("/api/survey/analyze-temp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -251,42 +232,18 @@ export default function SurveyPage() {
         throw new Error(analyzeResult.error || "분석 생성에 실패했습니다.");
       }
 
-      // Step 3: Result processing (2-3s)
-      setAnalysisStep(3);
-      await new Promise(resolve => setTimeout(resolve, 500)); // UI feedback
-
-      // Store analysis in localStorage for survey-result page
+      // Store analysis in localStorage
       localStorage.setItem("survey-analysis", JSON.stringify(analyzeResult.data));
-
-      // Keep answers in localStorage (will be submitted with email later)
       localStorage.setItem("survey-answers", JSON.stringify(formattedAnswers));
 
-      // Brief pause to show 100% completion
-      await new Promise(resolve => setTimeout(resolve, 800));
-
-      // Navigate to results (no sessionId required)
+      // Navigate to results
       router.push("/survey-result");
     } catch (err: any) {
-      setAnalysisError(err.message);
       setError(err.message);
-      // Modal stays open in error state
     } finally {
       setSubmitting(false);
     }
   };
-
-  const handleRetryAnalysis = () => {
-    setAnalysisError(null);
-    setShowAnalysisModal(false);
-    // User can click submit button again
-  };
-
-  const handleCancelAnalysis = () => {
-    setShowAnalysisModal(false);
-    setAnalysisError(null);
-    setSubmitting(false);
-  };
-
 
   if (loading) {
     return (
@@ -431,15 +388,6 @@ export default function SurveyPage() {
             <p className="text-sm text-red-600">{error}</p>
           </div>
         )}
-
-        {/* Analysis Progress Modal */}
-        <AnalysisProgressModal
-          open={showAnalysisModal}
-          currentStep={analysisStep}
-          error={analysisError}
-          onRetry={handleRetryAnalysis}
-          onCancel={handleCancelAnalysis}
-        />
       </div>
     </main>
   );

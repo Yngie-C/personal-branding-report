@@ -4,10 +4,8 @@ import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from "recharts";
-import { TrendingUp, Award, AlertCircle, ArrowRight, Sparkles, Share2, Globe, Mail, CheckCircle, Clock, Palette, Users, Lightbulb, Lock } from "lucide-react";
+import { TrendingUp, Award, AlertCircle, ArrowRight, Sparkles, Share2, Globe, Mail, CheckCircle, Clock, Palette, Users, Lightbulb } from "lucide-react";
 import { BriefAnalysis, CategoryLabels, SurveyAnswer } from "@/types/survey";
-import { SoulQuestion } from "@/types/soul-questions";
-import { getSoulQuestionById } from "@/lib/soul-questions/questions-bank";
 import {
   Dialog,
   DialogContent,
@@ -45,15 +43,6 @@ export default function SurveyResultPage() {
 
   // Copy feedback state
   const [copiedMessage, setCopiedMessage] = useState<string>("");
-
-  // Load Soul Questions for preview
-  const soulQuestions = useMemo(() => {
-    if (!analysis?.selectedSoulQuestions) return [];
-    return analysis.selectedSoulQuestions
-      .slice(0, 3)  // Only show first 3 questions as preview
-      .map(id => getSoulQuestionById(id))
-      .filter((q): q is SoulQuestion => q !== undefined);
-  }, [analysis?.selectedSoulQuestions]);
 
   // Load analysis from localStorage on mount
   useEffect(() => {
@@ -512,48 +501,6 @@ export default function SurveyResultPage() {
               </div>
             </div>
           </div>
-
-          {/* Soul Questions Preview */}
-          {soulQuestions.length > 0 && (
-            <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-2xl p-8 border border-purple-200">
-              <div className="flex items-center gap-3 mb-4">
-                <Sparkles className="w-6 h-6 text-purple-600" />
-                <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-purple-900 to-indigo-900">
-                  당신만의 성장 질문 프리뷰
-                </h2>
-              </div>
-              <p className="text-gray-700 mb-6 leading-relaxed">
-                PSA 분석 결과를 바탕으로 선택된 9개 질문입니다.
-                정식 브랜딩 리포트에서 자세히 답변하실 수 있습니다.
-              </p>
-
-              <div className="space-y-4">
-                {soulQuestions.map((q, i) => (
-                  <div key={q.id} className="bg-white rounded-xl p-5 border-l-4 border-purple-500 shadow-md hover:shadow-lg transition-shadow">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs font-medium">
-                        {q.category}
-                      </span>
-                      <span className="text-purple-600 text-sm font-medium">질문 {i + 1}/9</span>
-                    </div>
-                    <p className="text-gray-900 font-semibold mb-2 text-lg">{q.question}</p>
-                    <p className="text-sm text-gray-600 italic">{q.hint}</p>
-                  </div>
-                ))}
-
-                {/* Remaining 6 questions locked CTA */}
-                <div className="bg-purple-100 rounded-xl p-6 text-center border border-purple-300">
-                  <Lock className="w-6 h-6 mx-auto mb-3 text-purple-600" />
-                  <p className="text-sm text-purple-800 font-medium mb-2">
-                    나머지 6개 질문은 정식 리포트에서 확인하세요
-                  </p>
-                  <p className="text-xs text-purple-600">
-                    대기자 명단에 등록하여 출시 알림을 받으실 수 있습니다.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Persona Description */}
           <div className="bg-white rounded-2xl shadow-2xl p-8">
