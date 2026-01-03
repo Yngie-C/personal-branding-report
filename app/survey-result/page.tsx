@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from "recharts";
 import { TrendingUp, Award, AlertCircle, ArrowRight, Sparkles, Share2, Globe, Mail, CheckCircle, Clock, Palette, Users, Lightbulb } from "lucide-react";
@@ -14,6 +15,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { getCategoryTheme, getCategoryBackgroundStyle, getProgressBarColor, getRankBadgeColor } from "@/lib/theme/category-colors";
 
 export default function SurveyResultPage() {
   const router = useRouter();
@@ -316,6 +318,12 @@ export default function SurveyResultPage() {
     return `${mins}분 ${secs}초 소요`;
   };
 
+  // Get category theme based on top category
+  const theme = useMemo(() => {
+    if (!analysis) return null;
+    return getCategoryTheme(analysis.topCategories[0]);
+  }, [analysis]);
+
   // Get category icon
   const getCategoryIcon = (category: string) => {
     const icons: Record<string, string> = {
@@ -330,7 +338,7 @@ export default function SurveyResultPage() {
 
   if (!analysis) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-navy-900 via-slate-800 to-slate-900">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-white mx-auto mb-4"></div>
           <p className="text-lg text-white font-medium">분석 결과를 불러오는 중...</p>
@@ -340,18 +348,29 @@ export default function SurveyResultPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-navy-900 via-slate-800 to-slate-900">
+    <motion.main
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
+      className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-900"
+      style={theme ? getCategoryBackgroundStyle(analysis.topCategories[0]) : undefined}
+    >
       {/* Hero Section - Persona Card */}
       <section className="pt-20 pb-12 px-6">
-        <div className="max-w-4xl mx-auto text-center">
+        <motion.div
+          className="max-w-4xl mx-auto text-center"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+        >
           <div className="flex flex-wrap items-center justify-center gap-3 mb-6">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full text-purple-100 text-sm">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/5 backdrop-blur-md rounded-full text-purple-100 text-sm border border-white/10">
               <Sparkles className="w-4 h-4" />
               <span>PSA 강점 진단 완료</span>
             </div>
 
             {analysis.completionTimeSeconds && (
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full text-purple-100 text-sm">
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/5 backdrop-blur-md rounded-full text-purple-100 text-sm border border-white/10">
                 <Clock className="w-4 h-4" />
                 <span>{formatCompletionTime(analysis.completionTimeSeconds)}</span>
                 {analysis.completionTimeSeconds < 300 && <span className="ml-2">⚡</span>}
@@ -373,7 +392,7 @@ export default function SurveyResultPage() {
             {analysis.brandingKeywords.map((keyword, index) => (
               <span
                 key={index}
-                className="px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full text-white font-medium"
+                className="px-4 py-2 bg-white/10 backdrop-blur-md rounded-full text-white font-medium border border-white/20"
               >
                 #{keyword}
               </span>
@@ -383,7 +402,12 @@ export default function SurveyResultPage() {
           {/* Score Overview */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-3xl mx-auto">
             {/* Total Score */}
-            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6">
+            <motion.div
+              className="bg-white/15 backdrop-blur-md rounded-2xl p-6 border border-white/10"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1, duration: 0.5 }}
+            >
               <div className="flex items-center justify-center mb-2">
                 <Award className="w-5 h-5 text-yellow-300 mr-2" />
                 <span className="text-purple-100 text-sm">종합 점수</span>
@@ -392,24 +416,34 @@ export default function SurveyResultPage() {
                 {Math.round(analysis.totalScore)}
               </div>
               <div className="text-xs text-purple-200 mt-1">/ 100점</div>
-            </div>
+            </motion.div>
 
             {/* Top Category 1 */}
-            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6">
+            <motion.div
+              className="bg-white/15 backdrop-blur-md rounded-2xl p-6 border border-white/10"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2, duration: 0.5 }}
+            >
               <div className="flex items-center justify-center mb-2">
-                <TrendingUp className="w-5 h-5 text-green-300 mr-2" />
+                <TrendingUp className={`w-5 h-5 mr-2 ${theme?.textClass || 'text-green-300'}`} />
                 <span className="text-purple-100 text-sm">1위 강점</span>
               </div>
               <div className="text-xl font-bold text-white mb-1">
                 {CategoryLabels[analysis.topCategories[0]]}
               </div>
-              <div className="text-2xl font-bold text-green-300">
+              <div className={`text-2xl font-bold ${theme?.textClass || 'text-green-300'}`}>
                 {Math.round(analysis.categoryScores.find(s => s.category === analysis.topCategories[0])?.normalizedScore || 0)}점
               </div>
-            </div>
+            </motion.div>
 
             {/* Top Category 2 */}
-            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6">
+            <motion.div
+              className="bg-white/15 backdrop-blur-md rounded-2xl p-6 border border-white/10"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3, duration: 0.5 }}
+            >
               <div className="flex items-center justify-center mb-2">
                 <TrendingUp className="w-5 h-5 text-blue-300 mr-2" />
                 <span className="text-purple-100 text-sm">2위 강점</span>
@@ -420,17 +454,23 @@ export default function SurveyResultPage() {
               <div className="text-2xl font-bold text-blue-300">
                 {Math.round(analysis.categoryScores.find(s => s.category === analysis.topCategories[1])?.normalizedScore || 0)}점
               </div>
-            </div>
+            </motion.div>
           </div>
-        </div>
+        </motion.div>
       </section>
 
       {/* Main Content */}
       <section className="pb-20 px-6">
         <div className="max-w-4xl mx-auto space-y-12 md:space-y-16">
           {/* Hybrid Chart Layout: Radar + Progress Bars */}
-          <div className="bg-white rounded-2xl shadow-2xl p-8">
-            <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-purple-900 to-indigo-900 mb-6 text-center">
+          <motion.div
+            className="bg-white/90 backdrop-blur-md rounded-2xl shadow-2xl p-8 border border-white/20"
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.6 }}
+          >
+            <h2 className={`text-2xl md:text-3xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r ${theme ? `from-${theme.primary} to-${theme.secondary}` : 'from-purple-900 to-indigo-900'} mb-6 text-center`}>
               5차원 강점 프로필
             </h2>
 
@@ -442,8 +482,8 @@ export default function SurveyResultPage() {
                   <RadarChart data={analysis.radarData}>
                     <defs>
                       <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.8} />
-                        <stop offset="100%" stopColor="#6366f1" stopOpacity={0.3} />
+                        <stop offset="0%" stopColor={theme?.chartStart || "#8b5cf6"} stopOpacity={0.8} />
+                        <stop offset="100%" stopColor={theme?.chartEnd || "#6366f1"} stopOpacity={0.3} />
                       </linearGradient>
                     </defs>
                     <PolarGrid stroke="#e5e7eb" strokeWidth={1.5} />
@@ -455,10 +495,13 @@ export default function SurveyResultPage() {
                     <Radar
                       name="점수"
                       dataKey="score"
-                      stroke="#8b5cf6"
+                      stroke={theme?.chartStart || "#8b5cf6"}
                       fill="url(#colorScore)"
                       strokeWidth={3}
-                      dot={{ fill: '#8b5cf6', r: 5 }}
+                      dot={{ fill: theme?.chartStart || '#8b5cf6', r: 5 }}
+                      isAnimationActive={true}
+                      animationDuration={1000}
+                      animationEasing="ease-out"
                     />
                   </RadarChart>
                 </ResponsiveContainer>
@@ -470,53 +513,69 @@ export default function SurveyResultPage() {
                 <div className="space-y-4">
                   {analysis.categoryScores
                     .sort((a, b) => b.normalizedScore - a.normalizedScore)
-                    .map((cat, i) => (
-                      <div key={cat.category}>
-                        <div className="flex justify-between items-center mb-2">
-                          <div className="flex items-center gap-2">
-                            <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white ${
-                              i === 0 ? 'bg-green-500' : i === 1 ? 'bg-blue-500' : 'bg-purple-400'
-                            }`}>
-                              {i + 1}
-                            </span>
-                            <span className="font-medium text-gray-900">
-                              {CategoryLabels[cat.category]}
+                    .map((cat, i) => {
+                      const badgeColor = getRankBadgeColor(i, analysis.topCategories[0]);
+                      const barColor = getProgressBarColor(i, analysis.topCategories[0]);
+
+                      return (
+                        <div key={cat.category}>
+                          <div className="flex justify-between items-center mb-2">
+                            <div className="flex items-center gap-2">
+                              <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white ${badgeColor}`}>
+                                {i + 1}
+                              </span>
+                              <span className="font-medium text-gray-900">
+                                {CategoryLabels[cat.category]}
+                              </span>
+                            </div>
+                            <span className="text-lg font-bold text-gray-900">
+                              {Math.round(cat.normalizedScore)}
                             </span>
                           </div>
-                          <span className="text-lg font-bold text-gray-900">
-                            {Math.round(cat.normalizedScore)}
-                          </span>
+                          <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
+                            <motion.div
+                              className={`h-full ${barColor}`}
+                              initial={{ width: 0 }}
+                              whileInView={{ width: `${cat.normalizedScore}%` }}
+                              viewport={{ once: true }}
+                              transition={{ duration: 1, delay: i * 0.1, ease: "easeOut" }}
+                            />
+                          </div>
                         </div>
-                        <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
-                          <div
-                            className={`h-full transition-all duration-500 ${
-                              i === 0 ? 'bg-green-500' : i === 1 ? 'bg-blue-500' : 'bg-purple-400'
-                            }`}
-                            style={{ width: `${cat.normalizedScore}%` }}
-                          />
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                 </div>
               </div>
             </div>
-          </div>
+          </motion.div>
 
           {/* Persona Description */}
-          <div className="bg-white rounded-2xl shadow-2xl p-8">
-            <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-purple-900 to-indigo-900 mb-4">
+          <motion.div
+            className="bg-white/90 backdrop-blur-md rounded-2xl shadow-2xl p-8 border border-white/20"
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.6 }}
+          >
+            <h2 className={`text-2xl md:text-3xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r ${theme ? `from-${theme.primary} to-${theme.secondary}` : 'from-purple-900 to-indigo-900'} mb-4`}>
               페르소나 특성
             </h2>
             <p className="text-gray-800 leading-relaxed text-lg">
               {analysis.persona.description}
             </p>
-          </div>
+          </motion.div>
 
           {/* Strengths Summary */}
-          <div className="bg-white rounded-2xl shadow-2xl p-8">
+          <motion.div
+            className="bg-white/90 backdrop-blur-md rounded-2xl shadow-2xl p-8 border border-white/20"
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.6 }}
+          >
             <div className="flex items-center gap-3 mb-4">
-              <Award className="w-6 h-6 text-purple-600" />
-              <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-purple-900 to-indigo-900">
+              <Award className={`w-6 h-6 ${theme?.textClass || 'text-purple-600'}`} />
+              <h2 className={`text-2xl md:text-3xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r ${theme ? `from-${theme.primary} to-${theme.secondary}` : 'from-purple-900 to-indigo-900'}`}>
                 강점 분석
               </h2>
             </div>
@@ -543,11 +602,17 @@ export default function SurveyResultPage() {
                 ))}
               </div>
             </div>
-          </div>
+          </motion.div>
 
           {/* Strengths Scenarios */}
           {analysis.strengthsScenarios && analysis.strengthsScenarios.length > 0 && (
-            <div className="bg-white rounded-2xl shadow-2xl p-8">
+            <motion.div
+              className="bg-white/90 backdrop-blur-md rounded-2xl shadow-2xl p-8 border border-white/20"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-100px" }}
+              transition={{ duration: 0.6 }}
+            >
               <div className="flex items-center gap-3 mb-4">
                 <Lightbulb className="w-6 h-6 text-amber-500" />
                 <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-amber-900 to-orange-900">
@@ -568,7 +633,7 @@ export default function SurveyResultPage() {
                   </div>
                 ))}
               </div>
-            </div>
+            </motion.div>
           )}
 
           {/* Working Styles - Always visible */}
@@ -604,7 +669,13 @@ export default function SurveyResultPage() {
 
           {/* Complementary Style */}
           {analysis.shadowSides && (
-            <div className="bg-white rounded-2xl shadow-2xl p-8">
+            <motion.div
+              className="bg-white/90 backdrop-blur-md rounded-2xl shadow-2xl p-8 border border-white/20"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-100px" }}
+              transition={{ duration: 0.6 }}
+            >
               <div className="flex items-center gap-3 mb-4">
                 <Users className="w-6 h-6 text-indigo-600" />
                 <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-indigo-900 to-purple-900">
@@ -630,11 +701,17 @@ export default function SurveyResultPage() {
                   </div>
                 </div>
               )}
-            </div>
+            </motion.div>
           )}
 
           {/* 2X2 CTA GRID - Always visible */}
-          <div className="bg-white rounded-2xl shadow-2xl p-8">
+          <motion.div
+            className="bg-white/90 backdrop-blur-md rounded-2xl shadow-2xl p-8 border border-white/20"
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.6 }}
+          >
             {/* Section Header */}
             <div className="text-center mb-6">
               <h2 className="text-2xl font-bold text-gray-900 mb-2">
@@ -672,7 +749,7 @@ export default function SurveyResultPage() {
               {/* Row 2, Full Width: Waitlist Registration */}
               <Button
                 onClick={() => setShowWaitlistForm(true)}
-                className="h-24 md:col-span-2 flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white transition-all hover:scale-105"
+                className={`h-24 md:col-span-2 flex flex-col items-center justify-center gap-2 bg-gradient-to-br ${theme?.gradient || 'from-amber-600 to-orange-600'} hover:opacity-90 text-white transition-all hover:scale-105 ${theme?.shadowClass ? `shadow-lg ${theme.shadowClass}` : 'shadow-lg'}`}
               >
                 <Sparkles className="w-6 h-6" />
                 <span className="text-lg font-bold">대기자 명단 등록하기</span>
@@ -692,25 +769,25 @@ export default function SurveyResultPage() {
                 {copiedMessage}
               </div>
             )}
-          </div>
+          </motion.div>
 
           {/* WAITLIST FORM MODAL - Show when user clicks "대기자 명단 등록하기" */}
           {showWaitlistForm && (
             <Dialog open={showWaitlistForm} onOpenChange={setShowWaitlistForm}>
-              <DialogContent className="sm:max-w-md">
+              <DialogContent className="sm:max-w-md bg-slate-900/95 backdrop-blur-xl border border-white/20 text-white">
                 <DialogHeader>
-                  <DialogTitle className="text-center text-2xl">
+                  <DialogTitle className="text-center text-2xl text-white">
                     대기자 명단 등록
                   </DialogTitle>
-                  <DialogDescription className="text-center">
+                  <DialogDescription className="text-center text-gray-300">
                     정식 서비스 출시 시 우선적으로 연락드리겠습니다
                   </DialogDescription>
                 </DialogHeader>
 
                 <form onSubmit={handleWaitlistSubmit} className="space-y-4 py-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      이메일 {!email && <span className="text-red-500">*</span>}
+                    <label className="block text-sm font-medium text-gray-200 mb-2">
+                      이메일 {!email && <span className="text-red-400">*</span>}
                     </label>
                     <input
                       type="email"
@@ -718,22 +795,22 @@ export default function SurveyResultPage() {
                       defaultValue={email}
                       readOnly={!!email}
                       required={!email}
-                      className={`w-full px-4 py-3 border border-gray-300 rounded-lg ${
+                      className={`w-full px-4 py-3 border rounded-lg bg-white/10 backdrop-blur-sm text-white placeholder-gray-400 ${
                         email
-                          ? 'bg-gray-50 text-gray-600'
-                          : 'focus:ring-2 focus:ring-purple-500 focus:border-transparent'
+                          ? 'border-white/20'
+                          : 'border-white/30 focus:ring-2 focus:ring-purple-500 focus:border-transparent'
                       }`}
                       placeholder={!email ? "your@email.com" : ""}
                     />
                     {!email && (
-                      <p className="text-xs text-gray-500 mt-1">
+                      <p className="text-xs text-gray-400 mt-1">
                         분석 결과 저장 및 연락을 위해 필요합니다
                       </p>
                     )}
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-gray-200 mb-2">
                       휴대폰 번호 (선택사항)
                     </label>
                     <input
@@ -741,16 +818,16 @@ export default function SurveyResultPage() {
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
                       placeholder="010-1234-5678"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      className="w-full px-4 py-3 border border-white/30 rounded-lg bg-white/10 backdrop-blur-sm text-white placeholder-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     />
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-gray-400 mt-1">
                       SMS로 빠른 알림을 받으실 수 있습니다
                     </p>
                   </div>
 
                   {waitlistError && (
-                    <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                      <p className="text-sm text-red-700">{waitlistError}</p>
+                    <div className="p-3 bg-red-500/20 border border-red-400/30 rounded-lg backdrop-blur-sm">
+                      <p className="text-sm text-red-200">{waitlistError}</p>
                     </div>
                   )}
 
@@ -782,43 +859,43 @@ export default function SurveyResultPage() {
           {/* WAITLIST SUCCESS MODAL - Show after registration */}
           {showWaitlistModal && waitlistPosition && (
             <Dialog open={showWaitlistModal} onOpenChange={setShowWaitlistModal}>
-              <DialogContent className="sm:max-w-md">
+              <DialogContent className="sm:max-w-md bg-slate-900/95 backdrop-blur-xl border border-white/20 text-white">
                 <DialogHeader>
-                  <DialogTitle className="text-center text-2xl mb-2">
+                  <DialogTitle className="text-center text-2xl mb-2 text-white">
                     🎉 대기자 명단 등록 완료!
                   </DialogTitle>
-                  <DialogDescription className="text-center text-base">
+                  <DialogDescription className="text-center text-base text-gray-300">
                     정식 서비스 출시 시 우선적으로 연락드리겠습니다
                   </DialogDescription>
                 </DialogHeader>
 
                 <div className="py-6">
-                  <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-xl p-6 text-center mb-4">
-                    <p className="text-sm text-gray-600 mb-2">대기 순번</p>
-                    <p className="text-5xl font-bold text-purple-600 mb-2">
+                  <div className={`bg-gradient-to-br ${theme?.gradient || 'from-purple-600 to-indigo-600'} rounded-xl p-6 text-center mb-4 shadow-lg ${theme?.shadowClass || 'shadow-purple-600/30'}`}>
+                    <p className="text-sm text-white/80 mb-2">대기 순번</p>
+                    <p className="text-5xl font-bold text-white mb-2">
                       {waitlistPosition}
                     </p>
-                    <p className="text-sm text-gray-500">번째 고객님</p>
+                    <p className="text-sm text-white/70">번째 고객님</p>
                   </div>
 
-                  <div className="space-y-3 text-sm text-gray-700">
+                  <div className="space-y-3 text-sm text-gray-200">
                     <div className="flex items-start gap-2">
-                      <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <span className="text-green-600 text-xs">✓</span>
+                      <div className="w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0 mt-0.5 border border-green-400/30">
+                        <span className="text-green-400 text-xs">✓</span>
                       </div>
                       <p>PSA 분석 결과가 저장되었습니다</p>
                     </div>
                     <div className="flex items-start gap-2">
-                      <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <span className="text-green-600 text-xs">✓</span>
+                      <div className="w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0 mt-0.5 border border-green-400/30">
+                        <span className="text-green-400 text-xs">✓</span>
                       </div>
                       <p>웹 프로필이 생성되었습니다</p>
                     </div>
                     <div className="flex items-start gap-2">
-                      <div className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <span className="text-blue-600 text-xs">📧</span>
+                      <div className="w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0 mt-0.5 border border-blue-400/30">
+                        <span className="text-blue-400 text-xs">📧</span>
                       </div>
-                      <p>정식 출시 시 <strong>{email}</strong>로 연락드립니다</p>
+                      <p>정식 출시 시 <strong className="text-white">{email}</strong>로 연락드립니다</p>
                     </div>
                   </div>
                 </div>
@@ -826,7 +903,7 @@ export default function SurveyResultPage() {
                 <DialogFooter className="sm:justify-center">
                   <Button
                     onClick={() => setShowWaitlistModal(false)}
-                    className="w-full bg-purple-600 hover:bg-purple-700"
+                    className={`w-full bg-gradient-to-r ${theme?.gradient || 'from-purple-600 to-indigo-600'} hover:opacity-90`}
                   >
                     확인
                   </Button>
@@ -837,6 +914,6 @@ export default function SurveyResultPage() {
 
         </div>
       </section>
-    </main>
+    </motion.main>
   );
 }
