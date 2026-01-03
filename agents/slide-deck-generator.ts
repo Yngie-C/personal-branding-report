@@ -370,7 +370,7 @@ export class SlideDeckGeneratorAgent extends BaseAgent<SlideInput, SlideOutput> 
       color: titleColor,
     });
 
-    const bullets = input.brandStrategy.brandPersonality.map((trait) => ({
+    const bullets = input.brandStrategy.brandPersonality.map((trait: string) => ({
       text: trait,
       options: { bullet: true, fontSize: 18, color: '000000' },
     }));
@@ -538,7 +538,7 @@ export class SlideDeckGeneratorAgent extends BaseAgent<SlideInput, SlideOutput> 
           color: '333333',
         });
 
-        exp.achievements.slice(0, 3).forEach((achievement, idx) => {
+        exp.achievements.slice(0, 5).forEach((achievement, idx) => {
           slide.addText(`• ${achievement}`, {
             x: 1,
             y: 3.5 + idx * 0.4,
@@ -599,7 +599,7 @@ export class SlideDeckGeneratorAgent extends BaseAgent<SlideInput, SlideOutput> 
     });
 
     const strengths = input.content.strengthsSection || [];
-    const bullets = strengths.slice(0, 5).map((strength: string) => ({
+    const bullets = strengths.slice(0, 8).map((strength: string) => ({
       text: strength,
       options: { bullet: true, fontSize: 16, color: '000000' },
     }));
@@ -629,7 +629,7 @@ export class SlideDeckGeneratorAgent extends BaseAgent<SlideInput, SlideOutput> 
     });
 
     const achievements = input.content.achievementsSection || [];
-    const bullets = achievements.slice(0, 5).map((achievement: string) => ({
+    const bullets = achievements.slice(0, 8).map((achievement: string) => ({
       text: achievement,
       options: { bullet: true, fontSize: 16, color: '000000' },
     }));

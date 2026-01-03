@@ -7,6 +7,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { SurveyQuestion } from "@/types/survey";
 import CircularLikertScale from "@/components/survey/CircularLikertScale";
 import { seededShuffle } from "@/lib/utils/shuffle";
+import AnalysisProgressModal from "@/components/survey/AnalysisProgressModal";
 
 interface Answers {
   [questionId: string]: number;
@@ -32,6 +33,14 @@ export default function SurveyPage() {
   // Start time for completion tracking
   const [startTime] = useState(new Date());
 
+  // Track if user just answered the last question
+  const [showCompletionHint, setShowCompletionHint] = useState(false);
+
+  // Analysis progress modal states
+  const [showAnalysisModal, setShowAnalysisModal] = useState(false);
+  const [analysisStep, setAnalysisStep] = useState(0);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
+
   // Load questions on mount (no sessionId required)
   useEffect(() => {
     loadQuestions();
@@ -50,6 +59,31 @@ export default function SurveyPage() {
       localStorage.setItem("survey-answers", JSON.stringify(answers));
     }
   }, [answers]);
+
+  // Detect when user answers the last question (60th question)
+  useEffect(() => {
+    if (shuffledQuestions.length === 0) return;
+
+    const totalPages = Math.ceil(shuffledQuestions.length / QUESTIONS_PER_PAGE);
+    const lastQuestion = shuffledQuestions[shuffledQuestions.length - 1];
+    const isOnLastPage = currentPage === totalPages - 1;
+    const answeredLastQuestion = answers[lastQuestion.id] !== undefined;
+    const notFullyComplete = Object.keys(answers).length < shuffledQuestions.length;
+
+    // Show hint only when user just answered the last question but hasn't completed all
+    if (isOnLastPage && answeredLastQuestion && notFullyComplete) {
+      setShowCompletionHint(true);
+
+      // Auto-hide after 5 seconds
+      const timer = setTimeout(() => {
+        setShowCompletionHint(false);
+      }, 5000);
+
+      return () => clearTimeout(timer);
+    } else {
+      setShowCompletionHint(false);
+    }
+  }, [answers, currentPage, shuffledQuestions]);
 
   const loadQuestions = async () => {
     try {
@@ -176,8 +210,15 @@ export default function SurveyPage() {
 
     setSubmitting(true);
     setError("");
+    setShowAnalysisModal(true); // Show modal immediately
+    setAnalysisStep(0); // Start at step 0
+    setAnalysisError(null);
 
     try {
+      // Step 0: Response validation (1-2s)
+      setAnalysisStep(0);
+      await new Promise(resolve => setTimeout(resolve, 500)); // UI feedback
+
       // Calculate completion time
       const completionTimeSeconds = Math.floor((new Date().getTime() - startTime.getTime()) / 1000);
 
@@ -188,6 +229,12 @@ export default function SurveyPage() {
         category: q.category,
         score: answers[q.id] || 0
       }));
+
+      // Step 1: Score calculation (2-3s) - happens in API
+      setAnalysisStep(1);
+
+      // Step 2: AI analysis (8-20s) - happens in API
+      setAnalysisStep(2);
 
       // Call temporary analysis API (no sessionId needed)
       const analyzeResponse = await fetch("/api/survey/analyze-temp", {
@@ -204,19 +251,40 @@ export default function SurveyPage() {
         throw new Error(analyzeResult.error || "분석 생성에 실패했습니다.");
       }
 
+      // Step 3: Result processing (2-3s)
+      setAnalysisStep(3);
+      await new Promise(resolve => setTimeout(resolve, 500)); // UI feedback
+
       // Store analysis in localStorage for survey-result page
       localStorage.setItem("survey-analysis", JSON.stringify(analyzeResult.data));
 
       // Keep answers in localStorage (will be submitted with email later)
-      // Already saved by useEffect, but let's ensure it's there
       localStorage.setItem("survey-answers", JSON.stringify(formattedAnswers));
+
+      // Brief pause to show 100% completion
+      await new Promise(resolve => setTimeout(resolve, 800));
 
       // Navigate to results (no sessionId required)
       router.push("/survey-result");
     } catch (err: any) {
+      setAnalysisError(err.message);
       setError(err.message);
+      // Modal stays open in error state
+    } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleRetryAnalysis = () => {
+    setAnalysisError(null);
+    setShowAnalysisModal(false);
+    // User can click submit button again
+  };
+
+  const handleCancelAnalysis = () => {
+    setShowAnalysisModal(false);
+    setAnalysisError(null);
+    setSubmitting(false);
   };
 
 
@@ -347,9 +415,9 @@ export default function SurveyPage() {
             )}
           </div>
 
-          {/* Completion Warning */}
-          {!canSubmit() && currentPage === totalPages - 1 && (
-            <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-center">
+          {/* Completion Hint - Shows only when user answers the last question */}
+          {showCompletionHint && (
+            <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-center animate-fade-in">
               <p className="text-sm text-yellow-800">
                 모든 질문에 답변해야 결과를 확인할 수 있습니다.
                 ({Object.keys(answers).length}/{shuffledQuestions.length} 완료)
@@ -363,6 +431,15 @@ export default function SurveyPage() {
             <p className="text-sm text-red-600">{error}</p>
           </div>
         )}
+
+        {/* Analysis Progress Modal */}
+        <AnalysisProgressModal
+          open={showAnalysisModal}
+          currentStep={analysisStep}
+          error={analysisError}
+          onRetry={handleRetryAnalysis}
+          onCancel={handleCancelAnalysis}
+        />
       </div>
     </main>
   );

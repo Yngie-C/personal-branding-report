@@ -120,7 +120,13 @@ export class OrchestratorAgent extends BaseAgent<OrchestratorInput, Orchestrator
 
       const [contentResult, keywordResult] = await Promise.allSettled([
         new ContentWriterAgent().process(
-          { brandStrategy, resume: parsedResume },
+          {
+            brandStrategy,
+            resume: parsedResume,
+            portfolio: portfolioAnalysis ?? undefined,
+            questionAnswers: sessionData.data.questionAnswers,
+            briefAnalysis: sessionData.data.briefAnalysis,
+          },
           context
         ),
         new KeywordExtractorAgent().process(
@@ -214,7 +220,7 @@ export class OrchestratorAgent extends BaseAgent<OrchestratorInput, Orchestrator
           content,  // Added: pass the full content object with executiveSummary, strengthsSection, etc.
           brandStrategy,
           resume: parsedResume,
-          portfolioAnalysis,
+          portfolioAnalysis: portfolioAnalysis ?? undefined,
           briefAnalysis: sessionData.data.briefAnalysis,
         },
         context

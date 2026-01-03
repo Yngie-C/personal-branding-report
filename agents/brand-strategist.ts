@@ -16,11 +16,11 @@ export class BrandStrategistAgent extends BaseAgent<BrandStrategistInput, BrandS
       `퍼스널 브랜딩 전략가. 이력서/포트폴리오/답변 분석 후 JSON 반환:
 
 {
-  "brandEssence": "핵심 메시지 (10자)",
-  "uniqueValueProposition": "차별화 가치 (50자)",
-  "targetAudience": ["타겟1", "타겟2", "타겟3"],
-  "brandPersonality": ["성격1", "성격2", "성격3", "성격4"],
-  "keyMessages": ["메시지1", "메시지2", "메시지3"],
+  "brandEssence": "핵심 메시지 (30-50자, 구체적 키워드 포함)",
+  "uniqueValueProposition": "차별화 가치 (150-200자, 구체적 성과 예시 포함)",
+  "targetAudience": ["타겟1", "타겟2", "타겟3", "타겟4"],
+  "brandPersonality": ["성격1", "성격2", "성격3", "성격4", "성격5"],
+  "keyMessages": ["메시지1", "메시지2", "메시지3", "메시지4", "메시지5"],
   "visualDirection": {
     "colorPalette": ["#색상1", "#색상2", "#색상3", "#색상4"],
     "mood": "modern|professional|creative",
