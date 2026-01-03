@@ -63,13 +63,14 @@ export default function CircularLikertScale({
   };
 
   // 각 점수별 색상 (테두리 & 선택 시 배경)
-  const getCircleColor = (score: number): { border: string; bg: string; hover: string } => {
+  const getCircleColor = (score: number): { border: string; bg: string; hover: string; ring: string } => {
     if (score <= 2) {
       // 왼쪽: 붉은색 계열 (그렇다)
       return {
         border: "border-red-400",
         bg: "bg-red-400",
         hover: "hover:border-red-500",
+        ring: "ring-red-300",
       };
     } else if (score === 3) {
       // 약간 그렇다: 연한 붉은색
@@ -77,6 +78,7 @@ export default function CircularLikertScale({
         border: "border-red-300",
         bg: "bg-red-300",
         hover: "hover:border-red-400",
+        ring: "ring-red-200",
       };
     } else if (score === 4) {
       // 가운데: 회색 (보통이다)
@@ -84,6 +86,7 @@ export default function CircularLikertScale({
         border: "border-gray-300",
         bg: "bg-gray-300",
         hover: "hover:border-gray-400",
+        ring: "ring-gray-200",
       };
     } else if (score === 5) {
       // 약간 그렇지 않다: 연한 푸른색
@@ -91,6 +94,7 @@ export default function CircularLikertScale({
         border: "border-blue-300",
         bg: "bg-blue-300",
         hover: "hover:border-blue-400",
+        ring: "ring-blue-200",
       };
     } else {
       // 오른쪽: 푸른색 계열 (그렇지 않다)
@@ -98,6 +102,7 @@ export default function CircularLikertScale({
         border: "border-blue-400",
         bg: "bg-blue-400",
         hover: "hover:border-blue-500",
+        ring: "ring-blue-300",
       };
     }
   };
@@ -118,9 +123,9 @@ export default function CircularLikertScale({
               onClick={() => !disabled && onChange(score)}
               disabled={disabled}
               className={`
-                rounded-full border-3 sm:border-4 transition-all duration-200 flex-shrink-0
+                rounded-full border-4 sm:border-[5px] transition-all duration-200 flex-shrink-0
                 ${colors.border}
-                ${isSelected ? `${colors.bg} scale-110 shadow-lg` : "bg-white hover:scale-105"}
+                ${isSelected ? `${colors.bg} scale-110 shadow-2xl ring-2 ring-offset-2 ${colors.ring}` : "bg-white hover:scale-105 hover:shadow-md"}
                 ${!disabled && colors.hover}
                 ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}
               `}

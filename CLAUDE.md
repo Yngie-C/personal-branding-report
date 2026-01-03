@@ -241,8 +241,12 @@ const sessionId = localStorage.getItem('sessionId');
 
 **Design System:**
 - Upload/Questions pages: `bg-gradient-to-br from-blue-50 to-indigo-100`
-- Survey pages: `bg-gradient-to-br from-purple-50 to-indigo-100` [NEW]
-- Survey result: Dark gradient hero `from-purple-900 via-indigo-900 to-blue-900` [NEW]
+- Survey pages: **Dark glassmorphism** `bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900` [UPDATED]
+  - Header/cards: `bg-white/5` + `backdrop-blur-md` (glassmorphism)
+  - Question cards: `bg-white/90` + `backdrop-blur-md` (high readability)
+  - Buttons: Gradient `from-indigo-600 to-purple-600` with glow effects
+  - Likert scale: Enhanced borders (`border-4 sm:border-[5px]`) + ring effects on selection
+- Survey result: Dark gradient hero `from-purple-900 via-indigo-900 to-blue-900`
 - Cards: `bg-white rounded-2xl shadow-lg`
 - Buttons: Uses `@/components/ui/button` (shadcn/ui)
 - Icons: lucide-react

@@ -247,10 +247,10 @@ export default function SurveyPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 to-navy-50">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-purple-600 mx-auto mb-4"></div>
-          <p className="text-lg text-gray-700 font-medium">설문지를 불러오는 중...</p>
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-indigo-500 mx-auto mb-4"></div>
+          <p className="text-lg text-slate-300 font-medium">설문지를 불러오는 중...</p>
         </div>
       </div>
     );
@@ -264,28 +264,28 @@ export default function SurveyPage() {
   const progress = calculateProgress();
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-indigo-50 to-navy-50 p-6">
+    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 p-6">
       <div className="max-w-4xl mx-auto py-8">
         {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-3">
+        <div className="text-center mb-8 bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-8 shadow-xl">
+          <h1 className="text-4xl font-bold text-white mb-3">
             PSA 강점 진단
           </h1>
-          <p className="text-lg text-gray-600 mb-6">
+          <p className="text-lg text-slate-300 mb-6">
             Professional Strength Assessment • 60문항 • 약 6-12분 소요
           </p>
 
           {/* Overall Progress Bar */}
           <div className="max-w-2xl mx-auto mb-4">
-            <div className="flex justify-between text-sm text-gray-600 mb-2">
+            <div className="flex justify-between text-sm text-slate-300 mb-2">
               <span>전체 진행률</span>
-              <span className="font-semibold">
+              <span className="font-semibold text-white">
                 {Object.keys(answers).length} / {shuffledQuestions.length} 문제 완료 ({Math.round(progress)}%)
               </span>
             </div>
-            <div className="h-3 bg-white rounded-full overflow-hidden shadow-inner">
+            <div className="h-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full overflow-hidden shadow-inner">
               <div
-                className="h-full bg-gradient-to-r from-purple-500 to-indigo-600 transition-all duration-300"
+                className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-600 transition-all duration-300 shadow-lg shadow-indigo-500/50"
                 style={{ width: `${progress}%` }}
               />
             </div>
@@ -293,9 +293,9 @@ export default function SurveyPage() {
         </div>
 
         {/* Current Page Questions */}
-        <div className="bg-white rounded-2xl shadow-lg p-8 mb-6 max-w-2xl mx-auto">
+        <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-2xl border border-white/20 p-8 mb-6 max-w-2xl mx-auto">
           <div className="mb-6 text-center">
-            <span className="text-gray-600 text-sm">
+            <span className="text-slate-600 text-sm font-medium">
               페이지 {currentPage + 1} / {totalPages} • 질문 {startIndex + 1}-{Math.min(endIndex, shuffledQuestions.length)}
             </span>
           </div>
@@ -304,7 +304,7 @@ export default function SurveyPage() {
             {currentPageQuestions.map((question, index) => (
               <div
                 key={question.id}
-                className="border-b border-gray-200 pb-6 last:border-b-0"
+                className="border-b border-slate-200 pb-6 last:border-b-0"
                 data-question-id={question.id}
               >
                 <div className="mb-4">
@@ -333,7 +333,7 @@ export default function SurveyPage() {
               onClick={() => handlePageChange(currentPage - 1)}
               disabled={currentPage === 0}
               variant="outline"
-              className="px-4"
+              className="px-4 bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20 disabled:opacity-30"
             >
               <ChevronLeft className="w-4 h-4 mr-1" />
               이전
@@ -344,8 +344,12 @@ export default function SurveyPage() {
               <Button
                 key={i}
                 onClick={() => handlePageChange(i)}
-                variant={currentPage === i ? "default" : "outline"}
-                className="w-10 h-10"
+                variant="outline"
+                className={`w-10 h-10 backdrop-blur-sm border transition-all ${
+                  currentPage === i
+                    ? "bg-gradient-to-r from-indigo-600 to-purple-600 border-white/30 text-white shadow-lg shadow-indigo-500/50 scale-110"
+                    : "bg-white/10 border-white/20 text-slate-300 hover:bg-white/20 hover:text-white hover:border-white/40"
+                }`}
                 data-page-number={i + 1}
               >
                 {i + 1}
@@ -356,7 +360,7 @@ export default function SurveyPage() {
             {currentPage < totalPages - 1 ? (
               <Button
                 onClick={() => handlePageChange(currentPage + 1)}
-                className="px-4"
+                className="px-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white border border-white/20 hover:from-indigo-500 hover:to-purple-500 shadow-lg shadow-indigo-500/40 backdrop-blur-sm"
               >
                 다음
                 <ChevronRight className="w-4 h-4 ml-1" />
@@ -365,7 +369,7 @@ export default function SurveyPage() {
               <Button
                 onClick={handleSubmit}
                 disabled={!canSubmit() || submitting}
-                className="px-8 py-3 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700"
+                className="px-8 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white border border-white/20 hover:from-indigo-500 hover:to-purple-500 disabled:from-slate-700 disabled:to-slate-800 disabled:border-slate-600 shadow-lg shadow-indigo-500/50 backdrop-blur-sm"
               >
                 {submitting ? "분석 중..." : "결과 확인하기"}
               </Button>
@@ -374,8 +378,8 @@ export default function SurveyPage() {
 
           {/* Completion Hint - Shows only when user answers the last question */}
           {showCompletionHint && (
-            <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-center animate-fade-in">
-              <p className="text-sm text-yellow-800">
+            <div className="p-4 bg-yellow-900/20 backdrop-blur-sm border border-yellow-500/40 rounded-lg text-center animate-fade-in shadow-lg">
+              <p className="text-sm text-yellow-200 font-medium">
                 모든 질문에 답변해야 결과를 확인할 수 있습니다.
                 ({Object.keys(answers).length}/{shuffledQuestions.length} 완료)
               </p>
@@ -384,8 +388,8 @@ export default function SurveyPage() {
         </div>
 
         {error && (
-          <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-sm text-red-600">{error}</p>
+          <div className="mt-6 p-4 bg-red-900/20 backdrop-blur-sm border border-red-500/40 rounded-lg shadow-lg">
+            <p className="text-sm text-red-200 font-medium">{error}</p>
           </div>
         )}
       </div>
