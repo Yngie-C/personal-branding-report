@@ -48,6 +48,12 @@ next-env.d.ts
 /test-results/
 /playwright/.cache/
 
+# Test artifacts
+test-error.png
+test-output.log
+*_sample.docx
+*_sample.pdf
+
 # Generated PDFs
 *.pdf
 
