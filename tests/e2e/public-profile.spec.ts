@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { createSessionManager } from '../fixtures/session-manager';
 
 /**
  * Public Profile Page E2E Tests
@@ -11,13 +12,29 @@ import { test, expect } from '@playwright/test';
  */
 
 test.describe('Public Profile Page', () => {
-  // Note: This test requires a real profile slug
-  // For testing, we'll use a mock slug or skip if not available
-  const testSlug = process.env.TEST_PROFILE_SLUG || 'test-profile';
+  const sessionManager = createSessionManager();
+  let sessionId: string;
+  let testSlug: string;
+
+  test.beforeAll(async ({ browser }) => {
+    // Create a session with web profile for all tests in this suite
+    const page = await browser.newPage();
+    const result = await sessionManager.createSessionWithSurveyResult(page);
+    sessionId = result.sessionId;
+    testSlug = result.slug;
+    await page.close();
+
+    console.log(`[Public Profile Tests] Using slug: ${testSlug}`);
+  });
+
+  test.afterAll(async () => {
+    // Cleanup session after all tests
+    if (sessionId) {
+      await sessionManager.cleanupSession(sessionId);
+    }
+  });
 
   test('should render public profile page', async ({ page }) => {
-    test.skip(!process.env.TEST_PROFILE_SLUG, 'Requires valid profile slug');
-
     await page.goto(`/p/${testSlug}`);
 
     // Should load successfully
@@ -29,8 +46,6 @@ test.describe('Public Profile Page', () => {
   });
 
   test('should display SEO metadata', async ({ page }) => {
-    test.skip(!process.env.TEST_PROFILE_SLUG);
-
     await page.goto(`/p/${testSlug}`);
 
     // Check page title
@@ -51,8 +66,6 @@ test.describe('Public Profile Page', () => {
   });
 
   test('should display hero section', async ({ page }) => {
-    test.skip(!process.env.TEST_PROFILE_SLUG);
-
     await page.goto(`/p/${testSlug}`);
 
     // Check for headline
@@ -65,8 +78,6 @@ test.describe('Public Profile Page', () => {
   });
 
   test('should display profile sections', async ({ page }) => {
-    test.skip(!process.env.TEST_PROFILE_SLUG);
-
     await page.goto(`/p/${testSlug}`);
 
     // Look for section headings
@@ -78,8 +89,6 @@ test.describe('Public Profile Page', () => {
   });
 
   test('should display contact information', async ({ page }) => {
-    test.skip(!process.env.TEST_PROFILE_SLUG);
-
     await page.goto(`/p/${testSlug}`);
 
     // Check for email or contact info
@@ -109,23 +118,15 @@ test.describe('Public Profile Page', () => {
     expect(has404).toBeTruthy();
   });
 
-  test('should return 404 for unpublished profile', async ({ page }) => {
-    // Try to access a profile that exists but is not public
-    // This assumes we have a way to create such a profile in test
-
-    test.skip(true, 'Requires unpublished profile setup');
-
+  test.skip('should return 404 for unpublished profile', async ({ page }) => {
+    // TODO: This requires creating a profile with is_public=false
+    // Skip for now until we implement unpublished profile creation
     const unpublishedSlug = 'unpublished-test';
-
     const response = await page.goto(`/p/${unpublishedSlug}`);
-
-    // Should return 404
     expect(response?.status()).toBe(404);
   });
 
   test('should be accessible via direct URL', async ({ page }) => {
-    test.skip(!process.env.TEST_PROFILE_SLUG);
-
     // Navigate to profile directly (not from result page)
     await page.goto(`/p/${testSlug}`);
 
@@ -137,8 +138,6 @@ test.describe('Public Profile Page', () => {
   });
 
   test('should be shareable (has proper URL structure)', async ({ page }) => {
-    test.skip(!process.env.TEST_PROFILE_SLUG);
-
     await page.goto(`/p/${testSlug}`);
 
     const currentUrl = page.url();
@@ -152,8 +151,6 @@ test.describe('Public Profile Page', () => {
   });
 
   test('should have semantic HTML structure', async ({ page }) => {
-    test.skip(!process.env.TEST_PROFILE_SLUG);
-
     await page.goto(`/p/${testSlug}`);
 
     // Check for main landmark
@@ -168,8 +165,6 @@ test.describe('Public Profile Page', () => {
   });
 
   test('should load quickly (performance)', async ({ page }) => {
-    test.skip(!process.env.TEST_PROFILE_SLUG);
-
     const startTime = Date.now();
 
     await page.goto(`/p/${testSlug}`);
@@ -182,13 +177,30 @@ test.describe('Public Profile Page', () => {
 });
 
 test.describe('Public Profile - Static Generation', () => {
-  test('should work without JavaScript (SSR)', async ({ page }) => {
-    test.skip(!process.env.TEST_PROFILE_SLUG);
+  const sessionManager = createSessionManager();
+  let sessionId: string;
+  let testSlug: string;
 
+  test.beforeAll(async ({ browser }) => {
+    // Create a session with web profile for SSR test
+    const page = await browser.newPage();
+    const result = await sessionManager.createSessionWithSurveyResult(page);
+    sessionId = result.sessionId;
+    testSlug = result.slug;
+    await page.close();
+  });
+
+  test.afterAll(async () => {
+    if (sessionId) {
+      await sessionManager.cleanupSession(sessionId);
+    }
+  });
+
+  test('should work without JavaScript (SSR)', async ({ page }) => {
     // Disable JavaScript
     await page.context().setJavaScriptEnabled(false);
 
-    await page.goto(`/p/${process.env.TEST_PROFILE_SLUG}`);
+    await page.goto(`/p/${testSlug}`);
 
     // Content should still be visible (server-rendered)
     const heading = page.locator('h1').first();

@@ -1,20 +1,32 @@
 import { test, expect } from '@playwright/test';
+import { createSessionManager } from '../fixtures/session-manager';
 
 /**
  * Generating Page E2E Tests
  *
- * Tests for /generating page functionality:
- * - Progress display (5 steps)
- * - Polling mechanism
- * - Redirect to result page on completion
- * - Error handling
+ * STATUS: Phase 2 - Coming Soon
+ * Current implementation shows ComingSoon component
+ *
+ * These tests will be activated when full report generation feature is implemented
  */
 
-test.describe('Generating Page', () => {
-  test.beforeEach(async ({ page }) => {
-    test.skip(!process.env.TEST_SESSION_GENERATING, 'Requires session in generation state');
+test.describe.skip('Generating Page (Phase 2 - Coming Soon)', () => {
+  const sessionManager = createSessionManager();
+  let sessionId: string;
 
+  test.beforeEach(async ({ page }) => {
+    // Create session with report generation in progress
+    sessionId = await sessionManager.createSessionWithGenerating(page);
+
+    // Navigate to generating page
     await page.goto('/generating');
+  });
+
+  test.afterEach(async ({ page }) => {
+    if (sessionId) {
+      await sessionManager.cleanupSession(sessionId);
+      await sessionManager.clearLocalStorage(page);
+    }
   });
 
   test('should display generating page correctly', async ({ page }) => {
@@ -158,11 +170,6 @@ test.describe('Generating Page - Error Scenarios', () => {
   });
 
   test('should handle network errors during polling', async ({ page }) => {
-    // Navigate to generating (with valid session)
-    test.skip(!process.env.TEST_SESSION_GENERATING);
-
-    await page.goto('/generating');
-
     // Simulate network failure after a few polls
     await page.waitForTimeout(3000);
 

@@ -1,20 +1,59 @@
 import { test, expect } from '@playwright/test';
+import { createSessionManager } from '../fixtures/session-manager';
 
 /**
  * Result Page E2E Tests
  *
- * Tests for /result page functionality:
- * - PDF download link
- * - Web profile link
- * - Social assets download
- * - "새로 만들기" button
+ * STATUS: Phase 2 - Coming Soon
+ * Current implementation shows ComingSoon component
+ *
+ * These tests will be activated when full report results feature is implemented
  */
 
-test.describe('Result Page', () => {
-  test.beforeEach(async ({ page }) => {
-    test.skip(!process.env.TEST_SESSION_COMPLETED, 'Requires completed session');
+test.describe.skip('Result Page (Phase 2 - Coming Soon)', () => {
+  const sessionManager = createSessionManager();
+  let sessionId: string;
 
+  test.beforeEach(async ({ page }) => {
+    // Create session (just basic session, we'll mock the result data)
+    sessionId = await sessionManager.createSession(page);
+
+    // Mock the results API to return completed data
+    await page.route('**/api/results?sessionId=*', (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          data: {
+            report: {
+              id: 'mock-report-id',
+              pdf_url: '/mock-report.pdf',
+              brand_strategy: { essence: 'Test Brand' },
+              content: { story: 'Test Story' },
+            },
+            webProfile: {
+              slug: 'test-profile-slug',
+              profile_data: { name: 'Test User' },
+            },
+            socialAssets: [
+              { type: 'linkedin-banner', url: '/mock-linkedin.png' },
+              { type: 'profile-image', url: '/mock-profile.png' },
+              { type: 'business-card', url: '/mock-card.png' },
+            ],
+          },
+        }),
+      });
+    });
+
+    // Navigate to result page
     await page.goto('/result');
+  });
+
+  test.afterEach(async ({ page }) => {
+    if (sessionId) {
+      await sessionManager.cleanupSession(sessionId);
+      await sessionManager.clearLocalStorage(page);
+    }
   });
 
   test('should display result page correctly', async ({ page }) => {
@@ -199,6 +238,9 @@ test.describe('Result Page - Error Handling', () => {
   });
 
   test('should display error state with retry options', async ({ page }) => {
+    const sessionManager = createSessionManager();
+    const sessionId = await sessionManager.createSession(page);
+
     // Mock API error
     await page.route('**/api/results?sessionId=*', (route) => {
       route.fulfill({
@@ -207,8 +249,6 @@ test.describe('Result Page - Error Handling', () => {
         body: JSON.stringify({ error: '서버 오류' }),
       });
     });
-
-    test.skip(!process.env.TEST_SESSION_COMPLETED);
 
     await page.goto('/result');
 
@@ -220,5 +260,9 @@ test.describe('Result Page - Error Handling', () => {
     const buttonCount = await actionButtons.count();
 
     expect(buttonCount).toBeGreaterThan(0);
+
+    // Cleanup
+    await sessionManager.cleanupSession(sessionId);
+    await sessionManager.clearLocalStorage(page);
   });
 });

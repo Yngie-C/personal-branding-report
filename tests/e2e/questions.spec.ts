@@ -1,22 +1,33 @@
 import { test, expect } from '@playwright/test';
+import { createSessionManager } from '../fixtures/session-manager';
 import { generateAnswersForQuestions } from '../fixtures/questionnaire-answers';
 
 /**
  * Questions Page E2E Tests
  *
- * Tests for /questions page functionality:
- * - AI-generated questions loading (7-10 questions)
- * - Textarea input
- * - Required field validation
- * - Submit and navigate to generating page
+ * STATUS: Phase 2 - Coming Soon
+ * Current implementation shows ComingSoon component
+ *
+ * These tests will be activated when enhanced questionnaire feature is implemented
  */
 
-test.describe('Questions Page', () => {
-  test.beforeEach(async ({ page }) => {
-    // For this test, skip if we don't have a session with survey results
-    test.skip(!process.env.TEST_SESSION_WITH_SURVEY_RESULT, 'Requires completed survey');
+test.describe.skip('Questions Page (Phase 2 - Coming Soon)', () => {
+  const sessionManager = createSessionManager();
+  let sessionId: string;
 
+  test.beforeEach(async ({ page }) => {
+    // Create session with questions generated
+    sessionId = await sessionManager.createSessionWithQuestions(page);
+
+    // Navigate to questions page
     await page.goto('/questions');
+  });
+
+  test.afterEach(async ({ page }) => {
+    if (sessionId) {
+      await sessionManager.cleanupSession(sessionId);
+      await sessionManager.clearLocalStorage(page);
+    }
   });
 
   test('should display questions page correctly', async ({ page }) => {
@@ -181,7 +192,7 @@ test.describe('Questions Page', () => {
   });
 });
 
-test.describe('Questions Page - Without Survey', () => {
+test.describe('Questions Page - Without Session', () => {
   test('should redirect to start if no session', async ({ page }) => {
     // Clear localStorage
     await page.evaluate(() => localStorage.clear());

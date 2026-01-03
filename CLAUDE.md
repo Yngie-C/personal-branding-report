@@ -4,13 +4,26 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-A multi-agent AI system that analyzes resumes and portfolios to automatically generate professional personal branding reports. Built with Next.js 14 and Claude Agent SDK, featuring 9 specialized AI agents that collaborate to produce web profiles and brand analysis.
+A multi-agent AI system that analyzes professional strengths through psychometric surveys to automatically generate personal branding reports. Built with Next.js 14 and Claude Agent SDK.
 
-**Key outputs:**
+**Current Implementation Status:**
+- ✅ **Phase 1 (무료 티어) - LIVE**: PSA Survey → Brief Report → Public Web Profile
+- 🚧 **Phase 2 (유료 티어) - COMING SOON**: Resume Upload → Enhanced Questions → Full Report
+
+**Key outputs (Phase 1):**
+- Brief analysis report with persona identification (10 types)
 - Public web profile page (shareable URL at `/p/[slug]`)
-- Brand strategy and content analysis
+- Radar chart visualization of 5 professional dimensions
 
-**User flow:** Email-based session (no login) → PSA Survey (60 questions) → **Brief report (무료)** → File upload → Enhanced questionnaire (9 questions) → **Full report generation (유료)**
+**User flow (Current):**
+```
+/ (Landing) → /survey (60 questions) → /survey-result (Brief report) → /p/[slug] (Public profile)
+```
+
+**User flow (Planned - Phase 2):**
+```
+/ → /survey → /survey-result → /upload → /questions → /generating → /result
+```
 
 ## Development Commands
 
@@ -75,16 +88,20 @@ NEXT_SUPABASE_SECRET_KEY=   # Supabase secret key (replaces service_role key)
 
 ## Multi-Agent Architecture
 
-The system uses 9 specialized agents orchestrated in a specific workflow:
+### Current Implementation (Phase 1 - LIVE)
 
-### Orchestration Flow
-
-**Phase 1 (무료 티어) - PSA 설문만으로 약식 보고서 생성:**
+**Template-Based Brief Report Generation:**
 ```
 /api/survey/analyze
-├─ SurveyAnalyzerAgent      → BriefAnalysis (템플릿 기반, <1초)
-└─ WebProfileGeneratorAgent → Public web profile (/p/[slug])
+├─ Template Selector → BriefAnalysis (Rule-based, <1초)
+└─ Database Insert  → Web profile data (/p/[slug])
 ```
+
+**Note:** Currently uses template-based generation instead of AI agents for cost efficiency ($0 vs $0.002-0.005 per report). Phase 2 will introduce full multi-agent workflow.
+
+### Planned Architecture (Phase 2 - COMING SOON)
+
+The system will use 9 specialized AI agents orchestrated in a specific workflow:
 
 **Brief Report Generation (Rule-Based Template System):**
 - **Processing:** Template-based (no LLM calls)
@@ -229,15 +246,20 @@ const sessionId = localStorage.getItem('sessionId');
 
 ## Frontend Pages
 
-**User Journey:**
-1. `/start` - Email collection and session creation
-2. `/survey` - PSA 60-question survey with progress tracking
-3. `/survey-result` - **Brief analysis (무료 티어)** with persona card, radar chart, and web profile
-4. `/upload` - **Resume and portfolio file upload (유료 전환 시점)**
-5. `/questions` - Enhanced questionnaire (9 questions: Soul Questions 3 + Expertise 4 + Edge 2)
-6. `/generating` - Full report generation progress
-7. `/result` - **Full branding report (유료 티어)** with brand strategy and content analysis
-8. `/p/[slug]` - Public web profile (shareable, generated in Phase 1)
+### ✅ Implemented Pages (Phase 1)
+
+1. `/` - Landing page with dark glassmorphism design
+2. `/survey` - PSA 60-question survey with progress tracking (10 pages × 6 questions)
+3. `/survey-result` - Brief analysis with persona card, radar chart, strengths summary
+4. `/p/[slug]` - Public web profile (shareable, SEO-optimized)
+
+### 🚧 Coming Soon Pages (Phase 2)
+
+5. `/start` - Currently redirects to `/survey`
+6. `/upload` - Resume and portfolio file upload (ComingSoon component)
+7. `/questions` - Enhanced questionnaire (ComingSoon component)
+8. `/generating` - Full report generation progress (ComingSoon component)
+9. `/result` - Full branding report with brand strategy (ComingSoon component)
 
 **Design System:**
 - Upload/Questions pages: `bg-gradient-to-br from-blue-50 to-indigo-100`
@@ -340,21 +362,33 @@ Monitor progress in `report_sessions.status` and console logs.
 
 **Persona mapping issues:** Verify top 2 categories exist in `PersonaMap` (types/survey.ts). Check that category keys match pattern: `"category1-category2"`.
 
-## Playwright E2E Testing (NEW)
+## Playwright E2E Testing
 
 **End-to-End testing system** powered by Playwright with AI-based failure analysis.
+
+### Testing Status
+
+**✅ Active Tests (Phase 1 - Implemented Features):**
+- `survey.spec.ts` - PSA survey functionality
+- `survey-result.spec.ts` - Brief report display
+- `public-profile.spec.ts` - Public web profile
+- `user-flow.spec.ts` - Complete Phase 1 journey (adjusted for current flow)
+
+**⏸️  Skipped Tests (Phase 2 - Coming Soon):**
+- `start.spec.ts` - Email collection (deprecated, now redirects to survey)
+- `upload.spec.ts` - File upload (not yet implemented)
+- `questions.spec.ts` - Enhanced questionnaire (not yet implemented)
+- `generating.spec.ts` - Report generation (not yet implemented)
+- `result.spec.ts` - Full report results (not yet implemented)
 
 ### Testing Commands
 
 ```bash
-# Run all E2E tests
-npm run test:e2e
-
-# Run tests with UI (visual debugging)
-npm run test:e2e:ui
+# Run only Phase 1 (active) tests
+npm run test:e2e -- tests/e2e/survey.spec.ts tests/e2e/survey-result.spec.ts tests/e2e/public-profile.spec.ts
 
 # Run specific test file
-npm run test:e2e -- tests/e2e/start.spec.ts
+npm run test:e2e -- tests/e2e/survey.spec.ts
 
 # Run in headed mode (show browser)
 npm run test:e2e:headed

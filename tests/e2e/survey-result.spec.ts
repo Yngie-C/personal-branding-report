@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { createSessionManager } from '../fixtures/session-manager';
 
 /**
  * Survey Result Page E2E Tests
@@ -8,24 +9,28 @@ import { test, expect } from '@playwright/test';
  * - Radar chart rendering
  * - Category scores
  * - Navigation to questions page
- *
- * Note: This test assumes survey has been completed
- * For simplicity, we mock the survey completion or use API calls
  */
 
 test.describe('Survey Result Page', () => {
+  const sessionManager = createSessionManager();
+  let sessionId: string;
+  let slug: string;
+
   test.beforeEach(async ({ page }) => {
-    // For this test, we'll navigate directly to survey-result
-    // In a real scenario, you'd complete the survey first
-    // or have a fixture sessionId that already has survey results
+    // Create session with survey completed and brief report generated
+    const result = await sessionManager.createSessionWithSurveyResult(page);
+    sessionId = result.sessionId;
+    slug = result.slug;
 
-    // Skip this test if we can't set up the prerequisites
-    test.skip(
-      !process.env.TEST_SESSION_WITH_SURVEY_RESULT,
-      'Requires completed survey session'
-    );
-
+    // Navigate to survey-result page
     await page.goto('/survey-result');
+  });
+
+  test.afterEach(async ({ page }) => {
+    if (sessionId) {
+      await sessionManager.cleanupSession(sessionId);
+      await sessionManager.clearLocalStorage(page);
+    }
   });
 
   test('should display survey result page correctly', async ({ page }) => {

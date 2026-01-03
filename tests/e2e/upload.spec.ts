@@ -5,21 +5,22 @@ import { createMockResumePDF, getMockResumeFormData } from '../fixtures/test-fil
 /**
  * Upload Page E2E Tests
  *
- * Tests for /upload page functionality:
- * - Form input method (recommended)
- * - File upload method
- * - Portfolio upload (optional)
- * - Validation and error handling
+ * STATUS: Phase 2 - Coming Soon
+ * Current implementation shows ComingSoon component
+ *
+ * These tests will be activated when resume upload feature is implemented
  */
 
-test.describe('Upload Page', () => {
+test.describe.skip('Upload Page (Phase 2 - Coming Soon)', () => {
   const sessionManager = createSessionManager();
   let sessionId: string;
 
   test.beforeEach(async ({ page }) => {
-    // Create session and navigate to upload page
+    // Create session
     sessionId = await sessionManager.createSession(page);
-    await expect(page).toHaveURL('/upload');
+
+    // Navigate to upload page
+    await page.goto('/upload');
   });
 
   test.afterEach(async ({ page }) => {

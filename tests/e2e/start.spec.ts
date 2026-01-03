@@ -3,14 +3,13 @@ import { test, expect } from '@playwright/test';
 /**
  * Start Page E2E Tests
  *
- * Tests for /start page functionality:
- * - Email validation
- * - Session creation API
- * - localStorage persistence
- * - Redirect to /upload
+ * DEPRECATED: /start page now redirects to /survey
+ * Phase 2: Email collection will be moved to after survey completion
+ *
+ * These tests are skipped until Phase 2 implementation
  */
 
-test.describe('Start Page', () => {
+test.describe.skip('Start Page (Phase 2 - Coming Soon)', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/start');
   });
