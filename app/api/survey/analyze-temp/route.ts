@@ -11,7 +11,7 @@ import { supabaseAdmin } from '@/lib/supabase/server';
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { answers } = body; // Array of 60 SurveyAnswer objects
+    const { answers, completionTimeSeconds } = body; // Array of 60 SurveyAnswer objects + completion time
 
     // 1. Validation
     if (!Array.isArray(answers) || answers.length !== 60) {
@@ -103,6 +103,8 @@ export async function POST(request: Request) {
         radarData: analysis.radarData,
         lowScoreCategories: analysis.lowScoreCategories,
         selectedSoulQuestions: analysis.selectedSoulQuestions,
+        completionTimeSeconds: completionTimeSeconds || undefined,
+        strengthsScenarios: analysis.strengthsScenarios,
       },
       message: '분석이 완료되었습니다. 이메일을 입력하여 결과를 저장하세요.',
     });
