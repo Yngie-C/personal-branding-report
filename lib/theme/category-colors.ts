@@ -108,21 +108,36 @@ export function getCategoryBackgroundStyle(
  * @param index - 순위 (0-based: 0=1위, 1=2위, ...)
  * @param topCategory - 1위 카테고리
  * @returns Tailwind color class
+ *
+ * NOTE: Tailwind requires static class strings for proper detection.
+ * Do NOT use dynamic class composition like `bg-${variable}`.
  */
 export function getProgressBarColor(
   index: number,
   topCategory: SurveyCategory
 ): string {
   if (index === 0) {
-    // 1위: 카테고리 색상
-    const theme = getCategoryTheme(topCategory);
-    return `bg-${theme.primary}`;
+    // 1위: 카테고리별 정적 색상
+    const categoryColors: Record<SurveyCategory, string> = {
+      [SurveyCategory.EXECUTION]: "bg-red-600",
+      [SurveyCategory.INNOVATION]: "bg-orange-600",
+      [SurveyCategory.INFLUENCE]: "bg-amber-500",
+      [SurveyCategory.COLLABORATION]: "bg-emerald-600",
+      [SurveyCategory.RESILIENCE]: "bg-blue-600",
+    };
+    return categoryColors[topCategory];
   } else if (index === 1) {
-    // 2위: 파랑
-    return "bg-blue-500";
+    // 2위: 인디고
+    return "bg-indigo-500";
+  } else if (index === 2) {
+    // 3위: 보라
+    return "bg-purple-500";
+  } else if (index === 3) {
+    // 4위: 슬레이트
+    return "bg-slate-500";
   } else {
-    // 3-5위: 보라
-    return "bg-purple-400";
+    // 5위: 그레이
+    return "bg-gray-400";
   }
 }
 
@@ -131,20 +146,35 @@ export function getProgressBarColor(
  * @param index - 순위 (0-based: 0=1위, 1=2위, ...)
  * @param topCategory - 1위 카테고리
  * @returns Tailwind color class
+ *
+ * NOTE: Tailwind requires static class strings for proper detection.
+ * Do NOT use dynamic class composition like `bg-${variable}`.
  */
 export function getRankBadgeColor(
   index: number,
   topCategory: SurveyCategory
 ): string {
   if (index === 0) {
-    // 1위: 카테고리 색상
-    const theme = getCategoryTheme(topCategory);
-    return `bg-${theme.primary}`;
+    // 1위: 카테고리별 정적 색상
+    const categoryColors: Record<SurveyCategory, string> = {
+      [SurveyCategory.EXECUTION]: "bg-red-600",
+      [SurveyCategory.INNOVATION]: "bg-orange-600",
+      [SurveyCategory.INFLUENCE]: "bg-amber-500",
+      [SurveyCategory.COLLABORATION]: "bg-emerald-600",
+      [SurveyCategory.RESILIENCE]: "bg-blue-600",
+    };
+    return categoryColors[topCategory];
   } else if (index === 1) {
-    // 2위: 파랑
-    return "bg-blue-500";
+    // 2위: 인디고
+    return "bg-indigo-500";
+  } else if (index === 2) {
+    // 3위: 보라
+    return "bg-purple-500";
+  } else if (index === 3) {
+    // 4위: 슬레이트
+    return "bg-slate-500";
   } else {
-    // 3-5위: 보라
-    return "bg-purple-400";
+    // 5위: 그레이
+    return "bg-gray-400";
   }
 }
