@@ -1,3 +1,5 @@
+import { SurveyCategory } from './survey';
+
 export interface ReportContent {
   executiveSummary: string;
   brandStory: string;
@@ -101,4 +103,20 @@ export interface BriefWebProfile {
   contact: {
     email?: string;
   };
+  // ==========================================
+  // 추가 필드 (survey-result 페이지와 동일한 UI 지원)
+  // ==========================================
+  topCategories?: SurveyCategory[];        // 테마 색상용 (상위 2개 카테고리)
+  strengthsSummary?: string;                // 강점 분석 요약 텍스트
+  strengthsScenarios?: {                    // 강점 시나리오 섹션
+    title: string;
+    description: string;
+  }[];
+  lowScoreCategories?: {                    // 일하는 스타일 (저점수 재프레이밍)
+    category: SurveyCategory;
+    reframedLabel: string;
+    reframedDescription: string;
+  }[];
+  shadowSidesText?: string;                 // 시너지 파트너 섹션 텍스트
+  completionTimeSeconds?: number;           // 응답 패턴 (완료 시간)
 }

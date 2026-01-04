@@ -96,6 +96,13 @@ PSA 설문 분석 결과를 기반으로 사용자의 페르소나를 효과적�
         contact: {
           email: email || undefined,
         },
+        // 추가 필드 (survey-result 페이지와 동일한 UI 지원)
+        topCategories: analysis.topCategories,
+        strengthsSummary: analysis.strengthsSummary,
+        strengthsScenarios: analysis.strengthsScenarios,
+        lowScoreCategories: analysis.lowScoreCategories,
+        shadowSidesText: analysis.shadowSides,
+        completionTimeSeconds: analysis.completionTimeSeconds,
       };
 
       console.log(`[BriefWebProfileGenerator] Successfully created brief profile`);
