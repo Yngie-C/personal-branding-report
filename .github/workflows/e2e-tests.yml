@@ -9,15 +9,20 @@ on:
 
 jobs:
   e2e-test:
-    name: Playwright E2E Tests
+    name: Playwright E2E Tests (Shard ${{ matrix.shard }}/${{ strategy.job-total }})
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
 
     env:
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-      NEXT_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_SUPABASE_PUBLISHABLE_KEY }}
-      NEXT_SUPABASE_SECRET_KEY: ${{ secrets.NEXT_SUPABASE_SECRET_KEY }}
+      # Use separate test database if available, fallback to production
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.TEST_SUPABASE_URL || secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.TEST_SUPABASE_PUBLISHABLE_KEY || secrets.NEXT_SUPABASE_PUBLISHABLE_KEY }}
+      NEXT_SUPABASE_SECRET_KEY: ${{ secrets.TEST_SUPABASE_SECRET_KEY || secrets.NEXT_SUPABASE_SECRET_KEY }}
 
     steps:
       - name: Checkout code
@@ -29,10 +34,20 @@ jobs:
           node-version: '18'
           cache: 'npm'
 
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            playwright-${{ runner.os }}-
+
       - name: Install dependencies
         run: npm ci
 
       - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: npx playwright install chromium
 
       - name: Install system dependencies for Playwright
@@ -43,8 +58,8 @@ jobs:
         env:
           NODE_ENV: production
 
-      - name: Run E2E tests
-        run: npm run test:e2e
+      - name: Run E2E tests (Shard ${{ matrix.shard }}/${{ strategy.job-total }})
+        run: npx playwright test --shard=${{ matrix.shard }}/${{ strategy.job-total }}
         continue-on-error: true
         id: e2e-tests
 
@@ -52,7 +67,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report
+          name: playwright-report-${{ matrix.shard }}
           path: playwright-report/
           retention-days: 7
 
@@ -60,15 +75,22 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results
+          name: test-results-${{ matrix.shard }}
           path: tests/reports/
           retention-days: 7
 
       - name: Upload AI analysis reports
-        if: failure()
+        # Only run AI analysis if:
+        # 1. Tests failed AND
+        # 2. It's a PR with 'run-qa-agent' label OR manual workflow trigger
+        if: |
+          failure() && (
+            (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'run-qa-agent')) ||
+            github.event_name == 'workflow_dispatch'
+          )
         uses: actions/upload-artifact@v4
         with:
-          name: ai-analysis-reports
+          name: ai-analysis-reports-${{ matrix.shard }}
           path: tests/reports/ai-analysis/
           retention-days: 14
 
@@ -76,7 +98,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: failure-screenshots
+          name: failure-screenshots-${{ matrix.shard }}
           path: tests/reports/screenshots/
           retention-days: 14
 
@@ -84,38 +106,75 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: network-logs
+          name: network-logs-${{ matrix.shard }}
           path: tests/reports/network-logs/
           retention-days: 7
 
+      - name: Fail workflow if tests failed
+        if: steps.e2e-tests.outcome == 'failure'
+        run: exit 1
+
+  # Merge test results from all shards and post PR comment
+  report-results:
+    name: Report Test Results
+    if: always() && github.event_name == 'pull_request'
+    needs: e2e-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all test results
+        uses: actions/download-artifact@v4
+        with:
+          pattern: test-results-*
+          path: test-results
+          merge-multiple: true
+
       - name: Comment PR with test results
-        if: github.event_name == 'pull_request' && always()
         uses: actions/github-script@v7
         with:
           script: |
             const fs = require('fs');
-            const testResults = fs.existsSync('tests/reports/test-results.json')
-              ? JSON.parse(fs.readFileSync('tests/reports/test-results.json', 'utf8'))
-              : null;
+            const path = require('path');
 
-            let body = '## E2E Test Results\n\n';
+            let body = '## 🧪 E2E Test Results (Parallelized)\n\n';
+            body += `**Workflow Run**: [View Details](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})\n\n`;
 
-            if (testResults) {
-              const { stats } = testResults;
-              const total = stats.expected + stats.unexpected + stats.skipped;
-              const passed = stats.expected;
-              const failed = stats.unexpected;
-              const skipped = stats.skipped;
+            // Try to read merged test results
+            const resultsDir = 'test-results';
+            const resultFiles = fs.existsSync(resultsDir)
+              ? fs.readdirSync(resultsDir).filter(f => f.endsWith('.json'))
+              : [];
 
-              body += `- ✅ **Passed**: ${passed}/${total}\n`;
-              body += `- ❌ **Failed**: ${failed}/${total}\n`;
-              body += `- ⏭️ **Skipped**: ${skipped}/${total}\n`;
-              body += `- 📊 **Success Rate**: ${Math.round((passed/total)*100)}%\n\n`;
+            if (resultFiles.length > 0) {
+              let totalPassed = 0, totalFailed = 0, totalSkipped = 0;
 
-              if (failed > 0) {
-                body += '### Failed Tests\n';
-                // Add failed test details if available
-                body += '\nCheck [test artifacts](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details.\n';
+              resultFiles.forEach(file => {
+                try {
+                  const data = JSON.parse(fs.readFileSync(path.join(resultsDir, file), 'utf8'));
+                  if (data.stats) {
+                    totalPassed += data.stats.expected || 0;
+                    totalFailed += data.stats.unexpected || 0;
+                    totalSkipped += data.stats.skipped || 0;
+                  }
+                } catch (e) {
+                  console.log(`Failed to parse ${file}`);
+                }
+              });
+
+              const total = totalPassed + totalFailed + totalSkipped;
+              const successRate = total > 0 ? Math.round((totalPassed/total)*100) : 0;
+
+              body += `- ✅ **Passed**: ${totalPassed}/${total}\n`;
+              body += `- ❌ **Failed**: ${totalFailed}/${total}\n`;
+              body += `- ⏭️ **Skipped**: ${totalSkipped}/${total}\n`;
+              body += `- 📊 **Success Rate**: ${successRate}%\n`;
+              body += `- 🚀 **Shards**: 4 (parallel execution)\n\n`;
+
+              if (totalFailed > 0) {
+                body += '### ⚠️ Failed Tests\n';
+                body += 'Check the [test artifacts](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) for detailed failure information.\n\n';
+                body += '> 💡 **Tip**: Add the `run-qa-agent` label to this PR to enable AI-powered failure analysis.\n';
+              } else {
+                body += '### 🎉 All tests passed!\n';
               }
             } else {
               body += '❌ Test results not available. Check [workflow logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}).\n';
@@ -127,7 +186,3 @@ jobs:
               repo: context.repo.repo,
               body: body
             });
-
-      - name: Fail workflow if tests failed
-        if: steps.e2e-tests.outcome == 'failure'
-        run: exit 1

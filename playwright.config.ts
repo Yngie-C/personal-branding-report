@@ -6,16 +6,15 @@ import { defineConfig, devices } from '@playwright/test';
  * See https://playwright.dev/docs/test-configuration.
  */
 
-// Set environment variables for tests (from .env.local)
-process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://ujzwvaafodsvduehdvom.supabase.co';
-process.env.NEXT_SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_oLV3AjbxLbh5vCeE02divA_oJ9fM_37';
-process.env.NEXT_SUPABASE_SECRET_KEY = 'sb_secret_e5tpZKIpSShtZmCjExkGUw_w85vswWY';
+// Load environment variables from .env.local
+// Note: Environment variables should be set in .env.local or GitHub Secrets
+// DO NOT hardcode sensitive values here
 
 export default defineConfig({
   testDir: './tests/e2e',
 
   /* Run tests in files in parallel */
-  fullyParallel: false, // Disable parallel to avoid localStorage/session conflicts
+  fullyParallel: true, // Enable parallel execution for faster CI runs
 
   /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: !!process.env.CI,
@@ -23,8 +22,10 @@ export default defineConfig({
   /* Retry on CI only */
   retries: process.env.CI ? 2 : 0,
 
-  /* Opt out of parallel tests on CI */
-  workers: process.env.CI ? 1 : 1, // Single worker to prevent session conflicts
+  /* Workers for parallel execution */
+  // CI uses sharding (--shard flag), so we can use multiple workers per shard
+  // Local development uses 1 worker to avoid session conflicts
+  workers: process.env.CI ? 2 : 1
 
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: [
