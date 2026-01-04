@@ -482,7 +482,7 @@ export default function SurveyResultPage() {
             viewport={{ once: true, margin: "-100px" }}
             transition={{ duration: 0.6 }}
           >
-            <h2 className={`text-2xl md:text-3xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r ${theme ? `from-${theme.primary} to-${theme.secondary}` : 'from-purple-900 to-indigo-900'} mb-6 text-center`}>
+            <h2 className={`text-2xl md:text-3xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r ${theme?.gradient || 'from-purple-900 to-indigo-900'} mb-6 text-center`}>
               5차원 강점 프로필
             </h2>
 
@@ -604,7 +604,7 @@ export default function SurveyResultPage() {
             viewport={{ once: true, margin: "-100px" }}
             transition={{ duration: 0.6 }}
           >
-            <h2 className={`text-2xl md:text-3xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r ${theme ? `from-${theme.primary} to-${theme.secondary}` : 'from-purple-900 to-indigo-900'} mb-4`}>
+            <h2 className={`text-2xl md:text-3xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r ${theme?.gradient || 'from-purple-900 to-indigo-900'} mb-4`}>
               페르소나 특성
             </h2>
             <p className="text-gray-800 leading-relaxed text-lg">
@@ -622,7 +622,7 @@ export default function SurveyResultPage() {
           >
             <div className="flex items-center gap-3 mb-4">
               <Award className={`w-6 h-6 ${theme?.textClass || 'text-purple-600'}`} />
-              <h2 className={`text-2xl md:text-3xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r ${theme ? `from-${theme.primary} to-${theme.secondary}` : 'from-purple-900 to-indigo-900'}`}>
+              <h2 className={`text-2xl md:text-3xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r ${theme?.gradient || 'from-purple-900 to-indigo-900'}`}>
                 강점 분석
               </h2>
             </div>
