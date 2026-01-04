@@ -401,29 +401,12 @@ export default function SurveyResultPage() {
 
           {/* Score Overview */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-3xl mx-auto">
-            {/* Total Score */}
-            <motion.div
-              className="bg-white/15 backdrop-blur-md rounded-2xl p-6 border border-white/10"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1, duration: 0.5 }}
-            >
-              <div className="flex items-center justify-center mb-2">
-                <Award className="w-5 h-5 text-yellow-300 mr-2" />
-                <span className="text-purple-100 text-sm">종합 점수</span>
-              </div>
-              <div className="text-4xl font-bold text-white">
-                {Math.round(analysis.totalScore)}
-              </div>
-              <div className="text-xs text-purple-200 mt-1">/ 100점</div>
-            </motion.div>
-
             {/* Top Category 1 */}
             <motion.div
               className="bg-white/15 backdrop-blur-md rounded-2xl p-6 border border-white/10"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2, duration: 0.5 }}
+              transition={{ delay: 0.1, duration: 0.5 }}
             >
               <div className="flex items-center justify-center mb-2">
                 <TrendingUp className={`w-5 h-5 mr-2 ${theme?.textClass || 'text-green-300'}`} />
@@ -442,7 +425,7 @@ export default function SurveyResultPage() {
               className="bg-white/15 backdrop-blur-md rounded-2xl p-6 border border-white/10"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3, duration: 0.5 }}
+              transition={{ delay: 0.2, duration: 0.5 }}
             >
               <div className="flex items-center justify-center mb-2">
                 <TrendingUp className="w-5 h-5 text-blue-300 mr-2" />
@@ -453,6 +436,33 @@ export default function SurveyResultPage() {
               </div>
               <div className="text-2xl font-bold text-blue-300">
                 {Math.round(analysis.categoryScores.find(s => s.category === analysis.topCategories[1])?.normalizedScore || 0)}점
+              </div>
+            </motion.div>
+
+            {/* Response Pattern */}
+            <motion.div
+              className="bg-white/15 backdrop-blur-md rounded-2xl p-6 border border-white/10"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3, duration: 0.5 }}
+            >
+              <div className="flex items-center justify-center mb-2">
+                <Clock className="w-5 h-5 text-amber-300 mr-2" />
+                <span className="text-purple-100 text-sm">응답 패턴</span>
+              </div>
+              <div className="text-xl font-bold text-white">
+                {analysis.completionTimeSeconds && analysis.completionTimeSeconds < 300
+                  ? "직관형"
+                  : analysis.completionTimeSeconds && analysis.completionTimeSeconds > 600
+                  ? "숙고형"
+                  : "균형형"}
+              </div>
+              <div className="text-sm text-amber-200 mt-2">
+                {analysis.completionTimeSeconds && analysis.completionTimeSeconds < 300
+                  ? "빠른 판단력"
+                  : analysis.completionTimeSeconds && analysis.completionTimeSeconds > 600
+                  ? "신중한 분석"
+                  : "적절한 속도"}
               </div>
             </motion.div>
           </div>
