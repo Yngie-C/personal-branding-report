@@ -49,3 +49,11 @@ export interface Keywords {
   hashtags: string[];
   searchTerms: string[];
 }
+
+export interface VisualElements {
+  primaryColor?: string;
+  secondaryColor?: string;
+  accentColor?: string;
+  fontFamily?: string;
+  logoUrl?: string;
+}

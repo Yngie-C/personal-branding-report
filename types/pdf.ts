@@ -1,4 +1,5 @@
-import type { AssembledReport, BrandStrategy, ReportContent } from './report';
+import type { AssembledReport, ReportContent } from './report';
+import type { BrandStrategy } from './brand';
 import type { ParsedResume } from './resume';
 import type { PortfolioAnalysis } from './portfolio';
 import type { BriefAnalysis } from './survey';

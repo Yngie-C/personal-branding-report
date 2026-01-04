@@ -25,7 +25,7 @@ export default defineConfig({
   /* Workers for parallel execution */
   // CI uses sharding (--shard flag), so we can use multiple workers per shard
   // Local development uses 1 worker to avoid session conflicts
-  workers: process.env.CI ? 2 : 1
+  workers: process.env.CI ? 2 : 1,
 
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: [

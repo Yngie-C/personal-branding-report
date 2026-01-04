@@ -20,6 +20,10 @@ export interface AssembledReport {
     title: string;
     author: string;
     createdAt: Date;
+    executiveSummary?: string;
+    achievementsSection?: string[];
+    futureVision?: string;
+    callToAction?: string;
   };
 }
 

@@ -235,7 +235,7 @@ export class TextPdfGeneratorAgent extends BaseAgent<TextPdfInput, TextPdfOutput
       color: rgb(0.3, 0.3, 0.3),
     });
     yOffset -= this.LINE_HEIGHT * 1.5;
-    yOffset = this.drawParagraph(page, input.brandStrategy.valueProposition, yOffset, font);
+    yOffset = this.drawParagraph(page, input.brandStrategy.uniqueValueProposition, yOffset, font);
 
     // Target Audience
     yOffset -= this.LINE_HEIGHT * 2;
@@ -247,7 +247,7 @@ export class TextPdfGeneratorAgent extends BaseAgent<TextPdfInput, TextPdfOutput
       color: rgb(0.3, 0.3, 0.3),
     });
     yOffset -= this.LINE_HEIGHT * 1.5;
-    yOffset = this.drawParagraph(page, input.brandStrategy.targetAudience, yOffset, font);
+    yOffset = this.drawParagraph(page, input.brandStrategy.targetAudience.join(', '), yOffset, font);
 
     // Brand Personality
     if (yOffset > 150) {
@@ -261,7 +261,7 @@ export class TextPdfGeneratorAgent extends BaseAgent<TextPdfInput, TextPdfOutput
       });
       yOffset -= this.LINE_HEIGHT * 1.5;
 
-      input.brandStrategy.brandPersonality.forEach((trait) => {
+      input.brandStrategy.brandPersonality.forEach((trait: string) => {
         if (yOffset < 100) return;
         page.drawText(`• ${trait}`, {
           x: this.MARGIN + 20,
@@ -284,7 +284,7 @@ export class TextPdfGeneratorAgent extends BaseAgent<TextPdfInput, TextPdfOutput
     font: PDFFont,
     boldFont: PDFFont
   ): Promise<void> {
-    const experiences = input.resume.experience || [];
+    const experiences = input.resume.experiences || [];
 
     let page = doc.addPage([this.PAGE_WIDTH, this.PAGE_HEIGHT]);
     let yOffset = this.PAGE_HEIGHT - this.MARGIN;
@@ -292,7 +292,7 @@ export class TextPdfGeneratorAgent extends BaseAgent<TextPdfInput, TextPdfOutput
     // 섹션 타이틀
     yOffset = this.drawSectionTitle(page, 'Professional Experience', yOffset, boldFont);
 
-    experiences.forEach((exp, index) => {
+    experiences.forEach((exp) => {
       // 새 페이지 필요 시
       if (yOffset < 150) {
         page = doc.addPage([this.PAGE_WIDTH, this.PAGE_HEIGHT]);
@@ -302,7 +302,7 @@ export class TextPdfGeneratorAgent extends BaseAgent<TextPdfInput, TextPdfOutput
       yOffset -= this.LINE_HEIGHT;
 
       // 회사명 + 직책
-      page.drawText(`${exp.company} - ${exp.title}`, {
+      page.drawText(`${exp.company} - ${exp.role}`, {
         x: this.MARGIN,
         y: yOffset,
         size: 14,
@@ -312,7 +312,7 @@ export class TextPdfGeneratorAgent extends BaseAgent<TextPdfInput, TextPdfOutput
       yOffset -= this.LINE_HEIGHT;
 
       // 기간
-      page.drawText(exp.period, {
+      page.drawText(exp.duration, {
         x: this.MARGIN,
         y: yOffset,
         size: 11,
@@ -329,7 +329,7 @@ export class TextPdfGeneratorAgent extends BaseAgent<TextPdfInput, TextPdfOutput
       // 성과
       if (exp.achievements && exp.achievements.length > 0) {
         yOffset -= this.LINE_HEIGHT;
-        exp.achievements.forEach((achievement) => {
+        exp.achievements.forEach((achievement: string) => {
           if (yOffset < 100) return;
           page.drawText(`• ${achievement}`, {
             x: this.MARGIN + 20,
@@ -361,10 +361,10 @@ export class TextPdfGeneratorAgent extends BaseAgent<TextPdfInput, TextPdfOutput
     // 섹션 타이틀
     yOffset = this.drawSectionTitle(page, 'Skills & Education', yOffset, boldFont);
 
-    // Technical Skills
-    if (input.resume.skills?.technical && input.resume.skills.technical.length > 0) {
+    // Skills
+    if (input.resume.skills && input.resume.skills.length > 0) {
       yOffset -= this.LINE_HEIGHT;
-      page.drawText('Technical Skills', {
+      page.drawText('Skills', {
         x: this.MARGIN,
         y: yOffset,
         size: 14,
@@ -373,23 +373,7 @@ export class TextPdfGeneratorAgent extends BaseAgent<TextPdfInput, TextPdfOutput
       });
       yOffset -= this.LINE_HEIGHT * 1.5;
 
-      const skillsText = input.resume.skills.technical.join(', ');
-      yOffset = this.drawParagraph(page, skillsText, yOffset, font, 11);
-    }
-
-    // Soft Skills
-    if (input.resume.skills?.soft && input.resume.skills.soft.length > 0) {
-      yOffset -= this.LINE_HEIGHT * 2;
-      page.drawText('Soft Skills', {
-        x: this.MARGIN,
-        y: yOffset,
-        size: 14,
-        font: boldFont,
-        color: rgb(0.3, 0.3, 0.3),
-      });
-      yOffset -= this.LINE_HEIGHT * 1.5;
-
-      const skillsText = input.resume.skills.soft.join(', ');
+      const skillsText = input.resume.skills.join(', ');
       yOffset = this.drawParagraph(page, skillsText, yOffset, font, 11);
     }
 
@@ -407,7 +391,7 @@ export class TextPdfGeneratorAgent extends BaseAgent<TextPdfInput, TextPdfOutput
 
       input.resume.education.forEach((edu) => {
         if (yOffset < 100) return;
-        page.drawText(`${edu.degree} - ${edu.institution} (${edu.year})`, {
+        page.drawText(`${edu.degree} - ${edu.school} (${edu.year})`, {
           x: this.MARGIN + 20,
           y: yOffset,
           size: 11,
@@ -419,7 +403,7 @@ export class TextPdfGeneratorAgent extends BaseAgent<TextPdfInput, TextPdfOutput
     }
 
     // Certifications
-    if (input.resume.skills?.certifications && input.resume.skills.certifications.length > 0) {
+    if (input.resume.certifications && input.resume.certifications.length > 0) {
       yOffset -= this.LINE_HEIGHT * 2;
       page.drawText('Certifications', {
         x: this.MARGIN,
@@ -430,7 +414,7 @@ export class TextPdfGeneratorAgent extends BaseAgent<TextPdfInput, TextPdfOutput
       });
       yOffset -= this.LINE_HEIGHT * 1.5;
 
-      input.resume.skills.certifications.forEach((cert) => {
+      input.resume.certifications.forEach((cert: string) => {
         if (yOffset < 100) return;
         page.drawText(`• ${cert}`, {
           x: this.MARGIN + 20,

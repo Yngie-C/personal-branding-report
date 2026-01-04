@@ -176,7 +176,9 @@ export default function SurveyResultPage() {
         currentSessionId = sessionResult.data.sessionId;
         setSessionId(currentSessionId);
         setEmail(submittedEmail);
-        localStorage.setItem("sessionId", currentSessionId);
+        if (currentSessionId) {
+          localStorage.setItem("sessionId", currentSessionId);
+        }
 
         // Update web profile info
         setWebProfileSlug(sessionResult.data.webProfileSlug);

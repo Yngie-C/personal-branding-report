@@ -694,7 +694,7 @@ export class SlideDeckGeneratorAgent extends BaseAgent<SlideInput, SlideOutput> 
       : [input.brandStrategy.targetAudience];
 
     let yOffset = 1.8;
-    audiences.forEach((audience) => {
+    audiences.forEach((audience: string) => {
       if (yOffset < 5) {
         slide.addText(`• ${audience}`, {
           x: 0.7,

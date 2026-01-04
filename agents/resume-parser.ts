@@ -18,7 +18,7 @@ export class ResumeParserAgent extends BaseAgent<ResumeParserInput, ParsedResume
 {
   "personalInfo": {"name": "이름", "email": "이메일", "phone": "전화", "location": "위치"},
   "summary": "자기소개",
-  "experiences": [{"company": "회사", "role": "직책", "duration": "기간", "achievements": ["성과1"]}],
+  "experiences": [{"company": "회사", "role": "직책", "duration": "기간", "description": "업무설명", "achievements": ["성과1"]}],
   "education": [{"school": "학교", "degree": "학위", "year": "연도"}],
   "skills": ["스킬1", "스킬2"],
   "certifications": ["자격증1"]
