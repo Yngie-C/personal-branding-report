@@ -461,7 +461,7 @@ export default function SurveyResultPage() {
 
       {/* Main Content */}
       <section className="pb-20 px-6">
-        <div className="max-w-4xl mx-auto space-y-12 md:space-y-16">
+        <div className="max-w-4xl mx-auto space-y-8 md:space-y-10">
           {/* Hybrid Chart Layout: Radar + Progress Bars */}
           <motion.div
             className="bg-white/90 backdrop-blur-md rounded-2xl shadow-2xl p-8 border border-white/20"
