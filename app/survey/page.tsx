@@ -7,6 +7,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { SurveyQuestion } from "@/types/survey";
 import CircularLikertScale from "@/components/survey/CircularLikertScale";
 import { seededShuffle } from "@/lib/utils/shuffle";
+import { useSwipeable } from "react-swipeable";
 
 interface Answers {
   [questionId: string]: number;
@@ -34,6 +35,29 @@ export default function SurveyPage() {
 
   // Track if user just answered the last question
   const [showCompletionHint, setShowCompletionHint] = useState(false);
+
+  // Swipe gesture configuration
+  const swipeHandlers = useSwipeable({
+    onSwipedLeft: () => {
+      // Swipe left = next page
+      const totalPages = Math.ceil(shuffledQuestions.length / QUESTIONS_PER_PAGE);
+      if (currentPage < totalPages - 1) {
+        handlePageChange(currentPage + 1);
+      }
+    },
+    onSwipedRight: () => {
+      // Swipe right = previous page
+      if (currentPage > 0) {
+        handlePageChange(currentPage - 1);
+      }
+    },
+    preventScrollOnSwipe: false,      // CRITICAL: 세로 스크롤 허용
+    trackMouse: true,                  // 데스크톱 trackpad 지원
+    trackTouch: true,                  // 모바일 터치 지원
+    delta: 50,                         // 최소 swipe 거리 (px)
+    swipeDuration: 500,                // 최대 swipe 시간 (ms)
+    touchEventOptions: { passive: true }, // 스크롤 성능 개선
+  });
 
   // Load questions on mount (no sessionId required)
   useEffect(() => {
@@ -293,7 +317,10 @@ export default function SurveyPage() {
         </div>
 
         {/* Current Page Questions */}
-        <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-2xl border border-white/20 p-8 mb-6 max-w-2xl mx-auto">
+        <div
+          {...swipeHandlers}
+          className="bg-white/90 backdrop-blur-md rounded-2xl shadow-2xl border border-white/20 p-8 mb-6 max-w-2xl mx-auto"
+        >
           <div className="mb-6 text-center">
             <span className="text-slate-600 text-sm font-medium">
               페이지 {currentPage + 1} / {totalPages} • 질문 {startIndex + 1}-{Math.min(endIndex, shuffledQuestions.length)}
@@ -339,22 +366,40 @@ export default function SurveyPage() {
               <span className="hidden sm:inline">이전</span>
             </Button>
 
-            {/* Page Numbers - 44x44px touch target */}
-            {[...Array(totalPages)].map((_, i) => (
-              <Button
-                key={i}
-                onClick={() => handlePageChange(i)}
-                variant="outline"
-                className={`min-w-[44px] min-h-[44px] w-11 h-11 p-0 backdrop-blur-sm border transition-all ${
-                  currentPage === i
-                    ? "bg-gradient-to-r from-indigo-600 to-purple-600 border-white/30 text-white shadow-lg shadow-indigo-500/50 scale-105 sm:scale-110"
-                    : "bg-white/10 border-white/20 text-slate-300 hover:bg-white/20 hover:text-white hover:border-white/40"
-                }`}
-                data-page-number={i + 1}
-              >
-                <span className="text-sm sm:text-base font-medium">{i + 1}</span>
-              </Button>
-            ))}
+            {/* Page Dots Indicator */}
+            {[...Array(totalPages)].map((_, i) => {
+              const isActive = currentPage === i;
+
+              return (
+                <button
+                  key={i}
+                  onClick={() => handlePageChange(i)}
+                  className={`group relative transition-all duration-300 ${
+                    isActive ? 'p-2' : 'p-1.5'
+                  }`}
+                  aria-label={isActive ? `페이지 ${i + 1}, 현재 페이지` : `페이지 ${i + 1}로 이동`}
+                  aria-current={isActive ? "page" : undefined}
+                  data-page-number={i + 1}
+                >
+                  {/* Touch target overlay (44x44px minimum) */}
+                  <span className="absolute inset-0 min-w-[44px] min-h-[44px]" />
+
+                  {/* Visible dot */}
+                  <span
+                    className={`relative block rounded-full transition-all duration-300 ${
+                      isActive
+                        ? 'w-3 h-3 bg-gradient-to-r from-indigo-500 to-purple-500 shadow-lg shadow-indigo-500/50 scale-110'
+                        : 'w-2 h-2 bg-white/30 group-hover:bg-white/50 group-hover:scale-125'
+                    }`}
+                  />
+
+                  {/* Hover tooltip with page number */}
+                  <span className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-slate-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
+                    {i + 1}
+                  </span>
+                </button>
+              );
+            })}
 
             {/* Next Button or Submit */}
             {currentPage < totalPages - 1 ? (
