@@ -56,7 +56,7 @@ export default function BriefProfileLayout({ profileData }: { profileData: any }
                       dataKey="category"
                       tick={{ fill: '#4b5563', fontSize: 14, fontWeight: 500 }}
                     />
-                    <PolarRadiusAxis angle={90} domain={[0, 100]} />
+                    <PolarRadiusAxis angle={90} domain={[0, 100]} tick={false} />
                     <Radar
                       name="점수"
                       dataKey="score"
@@ -78,7 +78,7 @@ export default function BriefProfileLayout({ profileData }: { profileData: any }
                       dataKey="category"
                       tick={{ fill: '#4b5563', fontSize: 14, fontWeight: 500 }}
                     />
-                    <PolarRadiusAxis angle={90} domain={[0, 100]} />
+                    <PolarRadiusAxis angle={90} domain={[0, 100]} tick={false} />
                     <Radar
                       name="점수"
                       dataKey="score"

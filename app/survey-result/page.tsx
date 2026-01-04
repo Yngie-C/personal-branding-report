@@ -494,7 +494,7 @@ export default function SurveyResultPage() {
                         dataKey="category"
                         tick={{ fill: '#334e68', fontSize: 12, fontWeight: 600 }}
                       />
-                      <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fill: '#94a3b8' }} />
+                      <PolarRadiusAxis angle={90} domain={[0, 100]} tick={false} />
                       <Radar
                         name="점수"
                         dataKey="score"
@@ -525,7 +525,7 @@ export default function SurveyResultPage() {
                         dataKey="category"
                         tick={{ fill: '#334e68', fontSize: 12, fontWeight: 600 }}
                       />
-                      <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fill: '#94a3b8' }} />
+                      <PolarRadiusAxis angle={90} domain={[0, 100]} tick={false} />
                       <Radar
                         name="점수"
                         dataKey="score"
