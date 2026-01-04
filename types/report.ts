@@ -66,7 +66,6 @@ export interface ProfileSection {
 // ==========================================
 
 export type WebProfileType = 'brief' | 'full';
-export type ReportTier = 'free' | 'premium';
 
 /**
  * 약식 웹 프로필 (무료 티어)

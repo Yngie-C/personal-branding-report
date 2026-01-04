@@ -99,23 +99,29 @@ NEXT_SUPABASE_SECRET_KEY=   # Supabase secret key (replaces service_role key)
 
 **Note:** Currently uses template-based generation instead of AI agents for cost efficiency ($0 vs $0.002-0.005 per report). Phase 2 will introduce full multi-agent workflow.
 
-### Planned Architecture (Phase 2 - COMING SOON)
+### Agent 목록 (13개)
 
-The system will use 9 specialized AI agents orchestrated in a specific workflow:
+**Phase 1 (무료 티어) - 활성화:**
+- `SurveyAnalyzerAgent` - PSA 설문 분석 (템플릿 기반, LLM 미사용)
+- `BriefWebProfileGeneratorAgent` - 약식 웹 프로필 생성 (/p/[slug])
 
-**Brief Report Generation (Rule-Based Template System):**
-- **Processing:** Template-based (no LLM calls)
-- **Speed:** <1 second (vs 10-30s with AI)
-- **Cost:** $0 (vs $0.002-0.005 with AI)
-- **Content:**
-  - `strengthsSummary`: 30 pre-written templates (10 personas × 3 variants)
-  - `strengthsScenarios`: 22 scenario templates matched to top categories
-  - `shadowSides`: Generated from persona metadata + reframing
-  - `brandingKeywords`: From persona metadata
-- **Templates:** `lib/templates/persona-templates.ts`, `lib/templates/scenario-pool.ts`
-- **Selection logic:** `lib/templates/template-selector.ts` (variant: balanced/spiked/mixed)
+**Phase 2 (유료 티어) - 구현 완료:**
+- `OrchestratorAgent` - 전체 워크플로우 조율
+- `ResumeParserAgent` - 이력서 파싱
+- `PortfolioAnalyzerAgent` - 포트폴리오 분석
+- `QuestionDesignerAgent` - 맞춤형 질문 생성
+- `BrandStrategistAgent` - 브랜드 전략 수립
+- `ContentWriterAgent` - 리포트 콘텐츠 작성
+- `KeywordExtractorAgent` - SEO 키워드 추출
+- `ReportAssemblerAgent` - 리포트 조합
+- `TextPdfGeneratorAgent` - PDF 리포트 생성
+- `SlideDeckGeneratorAgent` - 슬라이드 덱 생성
 
-**Phase 2 (유료 티어) - OrchestratorAgent 전체 워크플로우:**
+**인프라:**
+- `E2ETestAgent` - E2E 테스트 자동화
+
+### Phase 2 워크플로우 (유료 티어)
+
 ```
 OrchestratorAgent (agents/orchestrator.ts)
 ├─ Step 1: Data Collection (Parallel)
@@ -132,7 +138,11 @@ OrchestratorAgent (agents/orchestrator.ts)
 ├─ Step 4: Report Assembly
 │  └─ ReportAssemblerAgent    → AssembledReport (structured pages)
 │
-└─ Step 5: Completion
+├─ Step 5: PDF Generation
+│  ├─ TextPdfGeneratorAgent   → PDF report
+│  └─ SlideDeckGeneratorAgent → Slide deck (PPTX + PDF)
+│
+└─ Step 6: Completion
 ```
 
 **Note:** `QuestionDesignerAgent`는 별도 API (`/api/questions/generate`)에서 실행되며, PSA 분석 결과를 기반으로 9개 질문 생성 (Soul Questions 3 + Expertise 4 + Edge 2)
@@ -168,6 +178,51 @@ Context object contains:
    - 10 total steps tracked in `report_sessions` table
    - Real-time status updates: pending → in_progress → completed/failed
 
+## Template System (Phase 1)
+
+Brief Report 생성에 사용되는 템플릿 기반 시스템:
+
+**핵심 파일:**
+- `lib/templates/template-selector.ts` - 템플릿 선택 로직
+- `lib/templates/persona-templates.ts` - 30개 템플릿 (10 personas × 3 variants)
+- `lib/templates/scenario-pool.ts` - 20개 시나리오 템플릿
+
+**Variant 선택 로직 (`selectVariant`):**
+- `balanced`: Top 2 > 70, Bottom 2 > 50 (균형 잡힌 점수)
+- `spiked`: Top 2 > 75, Bottom 2 < 50 (뾰족한 강점)
+- `mixed`: 기본 fallback
+
+**템플릿 구성:**
+```typescript
+{
+  personaType: PersonaType,
+  variant: 'balanced' | 'spiked' | 'mixed',
+  summaryPoints: string[]  // 3개 bullet points (150-200자씩)
+}
+```
+
+**성능:**
+- 처리 시간: <1초
+- 비용: $0 (LLM 호출 없음)
+
+## Soul Questions System
+
+PSA 결과 기반 맞춤형 질문 선택 시스템:
+
+**핵심 파일:**
+- `lib/soul-questions/matching-logic.ts` - 질문 매칭 로직
+- `lib/soul-questions/reframing-strategy.ts` - 저점수 카테고리 리프레이밍
+
+**질문 선택 로직 (`selectSoulQuestions`):**
+1. 고정 질문 `soul_identity_1` 항상 포함
+2. PSA 상위 카테고리와 매칭되는 질문 우선 선택
+3. 정확히 3개 질문 반환
+
+**리프레이밍 전략 (`getReframedLowScores`):**
+- 순위 4위 이하 카테고리 필터링
+- 긍정적 관점으로 재해석된 라벨/설명 제공
+- 예: "낮은 혁신 점수" → "안정적이고 검증된 방법 선호"
+
 ## File Parsing System
 
 Files are parsed immediately on upload (not during generation):
@@ -183,21 +238,25 @@ Agents receive pre-parsed text from database, not raw files.
 
 ## Database Schema
 
-PostgreSQL via Supabase with 9 main tables:
+PostgreSQL via Supabase with 11 main tables:
 
 **Core Tables:**
 - `report_sessions` - User sessions (email, status, survey_completed, brief_report_generated, timestamps)
 - `uploads` - File uploads with `parsed_data` JSONB column containing extracted text
 - `question_answers` - User questionnaire responses
 
-**PSA Survey Tables (NEW):**
-- `survey_questions` - Fixed 50-question PSA survey (version controlled)
+**PSA Survey Tables:**
+- `survey_questions` - 60개 PSA 설문 문항 (version controlled)
 - `survey_responses` - User answers to survey questions (1-7 Likert scale)
-- `brief_reports` - AI-generated brief analysis (persona, scores, strengths)
+- `brief_reports` - 템플릿 기반 brief analysis (persona, scores, strengths)
 
 **Output Tables:**
 - `reports` - Generated reports (brand_strategy, content, pdf_url)
 - `web_profiles` - Public profiles (slug, profile_data, seo_data, is_public)
+- `social_assets` - 소셜 미디어 에셋 (linkedin, twitter, instagram, business_card)
+
+**Marketing Tables:**
+- `waitlist` - 대기자 명단 (position, status, email, utm_params)
 
 **Migrations:**
 - `001_initial_schema.sql` - Core tables
@@ -210,16 +269,42 @@ PostgreSQL via Supabase with 9 main tables:
 
 **Storage buckets:** Must be manually created in Supabase dashboard as public buckets.
 
-## PSA Survey API Routes (NEW)
+## API Routes
 
-**Survey Management:**
-- `GET /api/survey/questions` - Retrieve 50 survey questions organized by category
-- `POST /api/survey/submit` - Submit user's 50 answers (validates completeness)
-- `POST /api/survey/analyze` - Trigger SurveyAnalyzerAgent to generate brief report
-- `GET /api/survey/result?sessionId=xxx` - Retrieve brief analysis results
+### Survey (Phase 1 - 무료 티어)
 
-**Enhanced Question Generation:**
-- `POST /api/questions/generate` - Now accepts PSA results to generate 7-10 focused questions (instead of 15-20)
+- `GET /api/survey/questions` - 60개 PSA 설문 문항 조회 (카테고리별 정리)
+- `POST /api/survey/submit` - 60개 응답 제출 (완료 여부 검증)
+- `POST /api/survey/analyze` - SurveyAnalyzerAgent로 Brief Report 생성
+- `GET /api/survey/result?sessionId=xxx` - Brief Analysis 결과 조회
+- `POST /api/survey/save-with-email` - 이메일과 함께 설문 결과 저장 (대안 경로)
+- `POST /api/survey/analyze-temp` - 임시 분석 (미리보기, 세션 없이)
+
+### Resume & Questions (Phase 2 - 유료 티어)
+
+- `POST /api/upload` - 이력서/포트폴리오 파일 업로드
+- `POST /api/parse-resume` - 업로드된 이력서 파싱 (ResumeParserAgent)
+- `POST /api/resume-form` - 이력서 폼 데이터 저장 (파일 업로드 대안)
+- `POST /api/questions/generate` - PSA 결과 기반 9개 맞춤 질문 생성
+- `POST /api/questions` - 질문 응답 저장
+
+### Report Generation (Phase 2 - 유료 티어)
+
+- `POST /api/generate` - OrchestratorAgent로 전체 리포트 생성
+- `GET /api/generate?sessionId=xxx` - 생성 진행률 조회
+- `GET /api/results?sessionId=xxx` - 완성된 리포트 조회
+
+### Session & Waitlist
+
+- `POST /api/session` - 새 세션 생성 (이메일)
+- `GET /api/session?id=xxx` - 세션 상태 조회
+- `POST /api/waitlist/join` - 대기자 등록
+- `GET /api/waitlist/status?sessionId=xxx` - 대기자 상태 확인
+
+### Testing
+
+- `POST /api/test/e2e` - E2E 테스트 실행 (E2ETestAgent)
+- `GET /api/test/e2e` - 테스트 API 문서
 
 ## API Route Patterns
 

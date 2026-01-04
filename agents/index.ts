@@ -8,5 +8,7 @@ export { BrandStrategistAgent } from './brand-strategist';
 export { ContentWriterAgent } from './content-writer';
 export { KeywordExtractorAgent } from './keyword-extractor';
 export { ReportAssemblerAgent } from './report-assembler';
-export { WebProfileGeneratorAgent } from './web-profile-generator';
+export { BriefWebProfileGeneratorAgent } from './brief-web-profile-generator';
+export { TextPdfGeneratorAgent } from './text-pdf-generator';
+export { SlideDeckGeneratorAgent } from './slide-deck-generator';
 export { E2ETestAgent } from './e2e-test-agent';
