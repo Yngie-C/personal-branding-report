@@ -46,6 +46,13 @@ export default function SurveyResultPage() {
   // Copy feedback state
   const [copiedMessage, setCopiedMessage] = useState<string>("");
 
+  // Statistics state for average line
+  const [statistics, setStatistics] = useState<{
+    averages: Record<string, number>;
+    overallAverage: number;
+    totalUsers: number;
+  } | null>(null);
+
   // Load analysis from localStorage on mount
   useEffect(() => {
     const savedAnalysis = localStorage.getItem("survey-analysis");
@@ -68,6 +75,34 @@ export default function SurveyResultPage() {
       router.push("/survey");
     }
   }, [router]);
+
+  // Fetch statistics for average line
+  useEffect(() => {
+    const fetchStatistics = async () => {
+      try {
+        const response = await fetch("/api/survey/statistics");
+        const result = await response.json();
+        if (result.data) {
+          setStatistics(result.data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch statistics:", err);
+        // Use default values on error
+        setStatistics({
+          averages: {
+            innovation: 68,
+            execution: 67,
+            influence: 70,
+            collaboration: 68,
+            resilience: 67,
+          },
+          overallAverage: 68,
+          totalUsers: 0,
+        });
+      }
+    };
+    fetchStatistics();
+  }, []);
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -326,6 +361,32 @@ export default function SurveyResultPage() {
     return getCategoryTheme(analysis.topCategories[0]);
   }, [analysis]);
 
+  // Category name mapping (Korean to English)
+  const categoryKeyMap: Record<string, string> = {
+    "혁신 사고": "innovation",
+    "철저 실행": "execution",
+    "대인 영향": "influence",
+    "협업 공감": "collaboration",
+    "상황 회복": "resilience",
+  };
+
+  // Extended radar data with max (100) and average lines
+  const extendedRadarData = useMemo(() => {
+    if (!analysis?.radarData) return [];
+
+    return analysis.radarData.map((item) => {
+      const categoryKey = categoryKeyMap[item.category] || "";
+      const avgScore = statistics?.averages?.[categoryKey] || 68;
+
+      return {
+        category: item.category,
+        score: item.score,
+        max: 100,
+        average: Math.round(avgScore),
+      };
+    });
+  }, [analysis?.radarData, statistics]);
+
   // Get category icon
   const getCategoryIcon = (category: string) => {
     const icons: Record<string, string> = {
@@ -494,7 +555,7 @@ export default function SurveyResultPage() {
                 {/* Mobile Chart (280px) */}
                 <div className="block sm:hidden">
                   <ResponsiveContainer width="100%" height={280}>
-                    <RadarChart data={analysis.radarData}>
+                    <RadarChart data={extendedRadarData}>
                       <defs>
                         <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="0%" stopColor={theme?.chartStart || "#8b5cf6"} stopOpacity={0.8} />
@@ -507,8 +568,28 @@ export default function SurveyResultPage() {
                         tick={{ fill: '#334e68', fontSize: 12, fontWeight: 600 }}
                       />
                       <PolarRadiusAxis angle={90} domain={[0, 100]} tick={false} />
+                      {/* 100점 만점 외곽선 - 실선, 더 어두운 색상 */}
                       <Radar
-                        name="점수"
+                        name="만점"
+                        dataKey="max"
+                        stroke="#6b7280"
+                        fill="none"
+                        strokeWidth={1.5}
+                        isAnimationActive={false}
+                      />
+                      {/* 전체 사용자 평균선 (카테고리별 평균 적용) */}
+                      <Radar
+                        name="전체 평균"
+                        dataKey="average"
+                        stroke="#94a3b8"
+                        fill="none"
+                        strokeWidth={2}
+                        strokeDasharray="6 3"
+                        isAnimationActive={false}
+                      />
+                      {/* 내 점수 */}
+                      <Radar
+                        name="내 점수"
                         dataKey="score"
                         stroke={theme?.chartStart || "#8b5cf6"}
                         fill="url(#colorScore)"
@@ -525,9 +606,9 @@ export default function SurveyResultPage() {
                 {/* Desktop Chart (350px) */}
                 <div className="hidden sm:block">
                   <ResponsiveContainer width="100%" height={350}>
-                    <RadarChart data={analysis.radarData}>
+                    <RadarChart data={extendedRadarData}>
                       <defs>
-                        <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
+                        <linearGradient id="colorScoreDesktop" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="0%" stopColor={theme?.chartStart || "#8b5cf6"} stopOpacity={0.8} />
                           <stop offset="100%" stopColor={theme?.chartEnd || "#6366f1"} stopOpacity={0.3} />
                         </linearGradient>
@@ -538,11 +619,31 @@ export default function SurveyResultPage() {
                         tick={{ fill: '#334e68', fontSize: 12, fontWeight: 600 }}
                       />
                       <PolarRadiusAxis angle={90} domain={[0, 100]} tick={false} />
+                      {/* 100점 만점 외곽선 - 실선, 더 어두운 색상 */}
                       <Radar
-                        name="점수"
+                        name="만점"
+                        dataKey="max"
+                        stroke="#6b7280"
+                        fill="none"
+                        strokeWidth={1.5}
+                        isAnimationActive={false}
+                      />
+                      {/* 전체 사용자 평균선 (카테고리별 평균 적용) */}
+                      <Radar
+                        name="전체 평균"
+                        dataKey="average"
+                        stroke="#94a3b8"
+                        fill="none"
+                        strokeWidth={2}
+                        strokeDasharray="6 3"
+                        isAnimationActive={false}
+                      />
+                      {/* 내 점수 */}
+                      <Radar
+                        name="내 점수"
                         dataKey="score"
                         stroke={theme?.chartStart || "#8b5cf6"}
-                        fill="url(#colorScore)"
+                        fill="url(#colorScoreDesktop)"
                         strokeWidth={3}
                         dot={{ fill: theme?.chartStart || '#8b5cf6', r: 5 }}
                         isAnimationActive={true}
@@ -551,6 +652,22 @@ export default function SurveyResultPage() {
                       />
                     </RadarChart>
                   </ResponsiveContainer>
+                </div>
+
+                {/* Legend */}
+                <div className="flex flex-wrap justify-center gap-4 mt-4 text-sm">
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-1 rounded" style={{ backgroundColor: theme?.chartStart || '#8b5cf6' }} />
+                    <span className="text-gray-700">내 점수</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-0.5" style={{ borderTop: '2px dashed #94a3b8' }} />
+                    <span className="text-gray-600">전체 평균</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-0.5 bg-gray-500" />
+                    <span className="text-gray-500">만점 (100점)</span>
+                  </div>
                 </div>
               </div>
 
@@ -593,6 +710,22 @@ export default function SurveyResultPage() {
                     })}
                 </div>
               </div>
+            </div>
+
+            {/* Score Interpretation Guide */}
+            <div className="mt-6 p-4 bg-gradient-to-r from-slate-50 to-gray-50 rounded-xl border border-gray-200">
+              <h4 className="text-sm font-semibold text-gray-700 mb-3">
+                점수 해석 가이드
+              </h4>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                <span className="text-gray-600"><span className="font-medium text-gray-700">①</span> 80+ 최상위 강점</span>
+                <span className="text-gray-600"><span className="font-medium text-gray-700">②</span> 70-79 상위권</span>
+                <span className="text-gray-600"><span className="font-medium text-gray-700">③</span> 60-69 평균</span>
+                <span className="text-gray-600"><span className="font-medium text-gray-700">④</span> ~59 성장 잠재력</span>
+              </div>
+              <p className="text-xs text-gray-500 mt-3">
+                낮은 점수는 부족함이 아닌 <strong className="text-gray-700">다른 영역에 집중하는 스타일</strong>입니다. 모든 영역이 높을 필요는 없어요!
+              </p>
             </div>
           </motion.div>
 
