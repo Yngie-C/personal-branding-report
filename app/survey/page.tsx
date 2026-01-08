@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -35,6 +35,19 @@ export default function SurveyPage() {
 
   // Track if user just answered the last question
   const [showCompletionHint, setShowCompletionHint] = useState(false);
+
+  // Refs for each question element (for auto-scroll)
+  const questionRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+
+  // Get first unanswered question index in the shuffled order
+  const getFirstUnansweredIndex = useCallback((): number => {
+    for (let i = 0; i < shuffledQuestions.length; i++) {
+      if (answers[shuffledQuestions[i].id] === undefined) {
+        return i;
+      }
+    }
+    return shuffledQuestions.length; // All answered
+  }, [shuffledQuestions, answers]);
 
   // Swipe gesture configuration
   const swipeHandlers = useSwipeable({
@@ -206,6 +219,33 @@ export default function SurveyPage() {
 
   const handleAnswerChange = (questionId: string, score: number) => {
     setAnswers(prev => ({ ...prev, [questionId]: score }));
+
+    // Find the index of the current question in shuffled order
+    const currentIndex = shuffledQuestions.findIndex(q => q.id === questionId);
+    const nextIndex = currentIndex + 1;
+
+    // If there's a next question
+    if (nextIndex < shuffledQuestions.length) {
+      const nextQuestion = shuffledQuestions[nextIndex];
+      const nextQuestionPage = Math.floor(nextIndex / QUESTIONS_PER_PAGE);
+
+      // If next question is on a different page, navigate to that page
+      if (nextQuestionPage !== currentPage) {
+        setCurrentPage(nextQuestionPage);
+        // Scroll to top after page change
+        setTimeout(() => {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }, 100);
+      } else {
+        // Same page: scroll to next question
+        setTimeout(() => {
+          const nextRef = questionRefs.current.get(nextQuestion.id);
+          if (nextRef) {
+            nextRef.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 100);
+      }
+    }
   };
 
   const calculateProgress = () => {
@@ -328,27 +368,45 @@ export default function SurveyPage() {
           </div>
 
           <div className="space-y-8">
-            {currentPageQuestions.map((question, index) => (
-              <div
-                key={question.id}
-                className="border-b border-slate-200 pb-6 last:border-b-0"
-                data-question-id={question.id}
-              >
-                <div className="mb-4">
-                  <p className="text-gray-900 font-medium leading-relaxed">
-                    {question.questionText}
-                  </p>
-                </div>
+            {currentPageQuestions.map((question, index) => {
+              // Calculate global index for this question
+              const globalIndex = shuffledQuestions.findIndex(q => q.id === question.id);
+              const firstUnansweredIndex = getFirstUnansweredIndex();
+              // Only allow answering up to and including the first unanswered question
+              const isDisabled = globalIndex > firstUnansweredIndex;
 
-                {/* Likert Scale - Circular Design */}
-                <div>
-                  <CircularLikertScale
-                    value={answers[question.id]}
-                    onChange={(score) => handleAnswerChange(question.id, score)}
-                  />
+              return (
+                <div
+                  key={question.id}
+                  ref={(el) => {
+                    if (el) {
+                      questionRefs.current.set(question.id, el);
+                    }
+                  }}
+                  className={`border-b border-slate-200 pb-6 last:border-b-0 transition-opacity duration-300 ${
+                    isDisabled ? 'opacity-40' : 'opacity-100'
+                  }`}
+                  data-question-id={question.id}
+                >
+                  <div className="mb-4">
+                    <p className={`font-medium leading-relaxed ${
+                      isDisabled ? 'text-gray-400' : 'text-gray-900'
+                    }`}>
+                      {question.questionText}
+                    </p>
+                  </div>
+
+                  {/* Likert Scale - Circular Design */}
+                  <div>
+                    <CircularLikertScale
+                      value={answers[question.id]}
+                      onChange={(score) => handleAnswerChange(question.id, score)}
+                      disabled={isDisabled}
+                    />
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 

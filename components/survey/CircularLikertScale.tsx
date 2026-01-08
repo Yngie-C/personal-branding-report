@@ -123,9 +123,9 @@ export default function CircularLikertScale({
               onClick={() => !disabled && onChange(score)}
               disabled={disabled}
               className={`
-                rounded-full border-4 sm:border-[5px] transition-all duration-200 flex-shrink-0
+                rounded-full border-4 sm:border-[5px] flex-shrink-0
                 ${colors.border}
-                ${isSelected ? `${colors.bg} scale-110 shadow-2xl ring-2 ring-offset-2 ${colors.ring}` : "bg-white hover:scale-105 hover:shadow-md"}
+                ${isSelected ? `${colors.bg} shadow-lg ring-2 ring-offset-2 ${colors.ring}` : "bg-white"}
                 ${!disabled && colors.hover}
                 ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}
               `}
