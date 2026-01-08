@@ -100,8 +100,9 @@ PSA 설문 분석 결과를 기반으로 사용자의 페르소나를 효과적�
         topCategories: analysis.topCategories,
         strengthsSummary: analysis.strengthsSummary,
         strengthsScenarios: analysis.strengthsScenarios,
-        lowScoreCategories: analysis.lowScoreCategories,
-        shadowSidesText: analysis.shadowSides,
+        // NEW: Strength-focused sections
+        strengthTips: analysis.strengthTips,
+        brandingMessages: analysis.brandingMessages,
         completionTimeSeconds: analysis.completionTimeSeconds,
       };
 

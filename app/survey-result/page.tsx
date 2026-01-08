@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from "recharts";
-import { TrendingUp, Award, AlertCircle, ArrowRight, Sparkles, Share2, Globe, Mail, CheckCircle, Clock, Palette, Users, Lightbulb } from "lucide-react";
+import { TrendingUp, Award, AlertCircle, ArrowRight, Sparkles, Share2, Globe, Mail, CheckCircle, Clock, Lightbulb, MessageSquare, Copy } from "lucide-react";
 import { BriefAnalysis, CategoryLabels, SurveyAnswer } from "@/types/survey";
 import {
   Dialog,
@@ -816,71 +816,94 @@ export default function SurveyResultPage() {
             </motion.div>
           )}
 
-          {/* Working Styles - Always visible */}
-          <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl p-8 border border-blue-200">
-            <div className="flex items-center gap-3 mb-4">
-              <Palette className="w-6 h-6 text-blue-600" />
-              <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-900 to-cyan-900">
-                나만의 일하는 스타일
-              </h2>
-            </div>
-            <p className="text-gray-700 mb-6 leading-relaxed">
-              낮은 점수는 결핍이 아니라 당신만의 독특한 스타일입니다.
-            </p>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {analysis.lowScoreCategories?.map((item) => (
-                <div key={item.category} className="bg-white rounded-xl p-5 shadow-md">
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                      <span className="text-lg">{getCategoryIcon(item.category)}</span>
-                    </div>
-                    <h3 className="font-semibold text-gray-900">{item.reframedLabel}</h3>
-                  </div>
-                  <p className="text-sm text-gray-700 leading-relaxed">
-                    {item.reframedDescription}
-                  </p>
-                </div>
-              )) || (
-                <p className="text-gray-600 col-span-2">모든 카테고리에서 균형잡힌 점수를 보이고 있습니다.</p>
-              )}
-            </div>
-          </div>
-
-          {/* Complementary Style */}
-          {analysis.shadowSides && (
+          {/* Strength Tips */}
+          {analysis.strengthTips && analysis.strengthTips.length > 0 && (
             <motion.div
-              className="bg-white/90 backdrop-blur-md rounded-2xl shadow-2xl p-8 border border-white/20"
+              className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl p-8 border border-amber-200"
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-100px" }}
               transition={{ duration: 0.6 }}
             >
               <div className="flex items-center gap-3 mb-4">
-                <Users className="w-6 h-6 text-indigo-600" />
-                <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-indigo-900 to-purple-900">
-                  함께 일하면 시너지 나는 파트너
+                <Lightbulb className="w-6 h-6 text-amber-600" />
+                <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-amber-900 to-orange-900">
+                  강점 활용 팁
                 </h2>
               </div>
-              <p className="text-gray-800 leading-relaxed whitespace-pre-line">
-                {analysis.shadowSides || '이런 동료와 협업하면 당신의 강점이 더욱 빛납니다.'}
+              <p className="text-gray-700 mb-6 leading-relaxed">
+                당신의 핵심 강점을 실무에서 더욱 빛나게 활용하는 방법입니다.
               </p>
 
-              {analysis.persona.shadowSides.length > 0 && (
-                <div className="mt-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-3">특성 보완 영역</h3>
+              <div className="space-y-4">
+                {analysis.strengthTips.map((tip, index) => (
+                  <div key={index} className="bg-white rounded-xl p-5 shadow-md border-l-4 border-amber-400">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-sm font-semibold">
+                        {tip.strength}
+                      </span>
+                    </div>
+                    <p className="text-gray-800 leading-relaxed mb-2">{tip.tip}</p>
+                    <p className="text-sm text-gray-500 italic">📌 {tip.scenario}</p>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+
+          {/* Branding Messages Guide */}
+          {analysis.brandingMessages && (
+            <motion.div
+              className="bg-gradient-to-br from-rose-50 to-pink-50 rounded-2xl p-8 border border-rose-200"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-100px" }}
+              transition={{ duration: 0.6 }}
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <MessageSquare className="w-6 h-6 text-rose-600" />
+                <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-rose-900 to-pink-900">
+                  브랜딩 메시지 가이드
+                </h2>
+              </div>
+              <p className="text-gray-700 mb-6 leading-relaxed">
+                자기소개, LinkedIn 프로필, 면접 등에서 활용할 수 있는 문구입니다.
+              </p>
+
+              <div className="space-y-6">
+                {/* Self Intro */}
+                <div className="bg-white rounded-xl p-5 shadow-md">
+                  <h3 className="text-sm font-semibold text-gray-500 mb-2">한 줄 자기소개</h3>
+                  <p className="text-lg font-medium text-gray-900">&ldquo;{analysis.brandingMessages.selfIntro}&rdquo;</p>
+                </div>
+
+                {/* LinkedIn Headline */}
+                <div className="bg-white rounded-xl p-5 shadow-md">
+                  <h3 className="text-sm font-semibold text-gray-500 mb-2">LinkedIn 헤드라인</h3>
+                  <p className="text-gray-800">{analysis.brandingMessages.linkedinHeadline}</p>
+                </div>
+
+                {/* Elevator Pitch */}
+                <div className="bg-white rounded-xl p-5 shadow-md">
+                  <h3 className="text-sm font-semibold text-gray-500 mb-2">엘리베이터 피치</h3>
+                  <p className="text-gray-700 italic leading-relaxed">&ldquo;{analysis.brandingMessages.elevatorPitch}&rdquo;</p>
+                </div>
+
+                {/* Hashtags */}
+                <div className="bg-white rounded-xl p-5 shadow-md">
+                  <h3 className="text-sm font-semibold text-gray-500 mb-3">추천 해시태그</h3>
                   <div className="flex flex-wrap gap-2">
-                    {analysis.persona.shadowSides.map((shadow, index) => (
+                    {analysis.brandingMessages.hashtags.map((tag, index) => (
                       <span
                         key={index}
-                        className="px-3 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium"
+                        className="px-3 py-1.5 bg-rose-100 text-rose-700 rounded-full text-sm font-medium"
                       >
-                        {shadow}
+                        #{tag}
                       </span>
                     ))}
                   </div>
                 </div>
-              )}
+              </div>
             </motion.div>
           )}
 

@@ -11,12 +11,12 @@ import {
   getPersonaByCategories,
   CategoryLabels,
 } from '@/types/survey';
-import { getReframedLowScores } from '@/lib/soul-questions/reframing-strategy';
 import { selectSoulQuestions } from '@/lib/soul-questions/matching-logic';
 import {
   selectStrengthsSummary,
   selectStrengthsScenarios,
-  generateShadowSides,
+  selectStrengthTips,
+  selectBrandingMessages,
 } from '@/lib/templates';
 
 export class SurveyAnalyzerAgent extends BaseAgent<SurveyResponse, BriefAnalysis> {
@@ -28,7 +28,8 @@ export class SurveyAnalyzerAgent extends BaseAgent<SurveyResponse, BriefAnalysis
 템플릿 시스템:
 - 30개 strengthsSummary 템플릿 (10 페르소나 × 3 variants: balanced/spiked/mixed)
 - 22개 시나리오 템플릿 (5 카테고리 기반)
-- 페르소나 메타데이터 기반 키워드 및 shadowSides
+- 10개 강점 활용 팁 템플릿 (페르소나별)
+- 30개 브랜딩 메시지 템플릿 (10 페르소나 × 3 variants)
 
 처리: <1초, 비용: $0, AI 호출: 없음`
     );
@@ -98,15 +99,16 @@ export class SurveyAnalyzerAgent extends BaseAgent<SurveyResponse, BriefAnalysis
       }));
 
       // 8. Generate analysis using template system
-      const lowScoreReframing = getReframedLowScores(categoryScores);
-
       console.log('[SurveyAnalyzer] Using TEMPLATE system (100%)');
 
       // Template-based generation (fast, consistent, $0 cost)
       const strengthsSummary = selectStrengthsSummary(persona.type, categoryScores);
       const strengthsScenarios = selectStrengthsScenarios(topCategories);
-      const shadowSides = generateShadowSides(persona, lowScoreReframing);
       const brandingKeywords = persona.brandingKeywords;
+
+      // NEW: Strength-focused sections (replaces lowScoreReframing & shadowSides)
+      const strengthTips = selectStrengthTips(persona.type);
+      const brandingMessages = selectBrandingMessages(persona.type, categoryScores);
 
       // 9. Select Soul Questions for later use
       const tempBriefAnalysis: BriefAnalysis = {
@@ -133,12 +135,14 @@ export class SurveyAnalyzerAgent extends BaseAgent<SurveyResponse, BriefAnalysis
         persona,
         topCategories,
         strengthsSummary,
-        shadowSides,
         brandingKeywords,
         strengthsScenarios,
         radarData,
-        lowScoreCategories: lowScoreReframing,  // NEW: 리프레이밍된 낮은 점수
-        selectedSoulQuestions: soulQuestionIds, // NEW: 선택된 Soul Questions
+        // NEW: Strength-focused sections
+        strengthTips,
+        brandingMessages,
+        // Soul Questions (for Phase 2)
+        selectedSoulQuestions: soulQuestionIds,
         completionTimeSeconds,
         analyzedAt: new Date(),
       };

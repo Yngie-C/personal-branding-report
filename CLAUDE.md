@@ -185,21 +185,21 @@ Brief Report 생성에 사용되는 템플릿 기반 시스템:
 **핵심 파일:**
 - `lib/templates/template-selector.ts` - 템플릿 선택 로직
 - `lib/templates/persona-templates.ts` - 30개 템플릿 (10 personas × 3 variants)
-- `lib/templates/scenario-pool.ts` - 20개 시나리오 템플릿
+- `lib/templates/scenario-pool.ts` - 22개 시나리오 템플릿
+- `lib/templates/strength-extensions/strength-tips.ts` - 10개 강점 활용 팁 템플릿
+- `lib/templates/strength-extensions/branding-messages.ts` - 30개 브랜딩 메시지 템플릿
 
 **Variant 선택 로직 (`selectVariant`):**
 - `balanced`: Top 2 > 70, Bottom 2 > 50 (균형 잡힌 점수)
 - `spiked`: Top 2 > 75, Bottom 2 < 50 (뾰족한 강점)
 - `mixed`: 기본 fallback
 
-**템플릿 구성:**
-```typescript
-{
-  personaType: PersonaType,
-  variant: 'balanced' | 'spiked' | 'mixed',
-  summaryPoints: string[]  // 3개 bullet points (150-200자씩)
-}
-```
+**템플릿 종류:**
+
+1. **Strengths Summary** (30개): 페르소나별 강점 요약 (3 bullet points)
+2. **Strength Scenarios** (22개): 강점이 빛나는 상황 시나리오
+3. **Strength Tips** (10개): 페르소나별 강점 활용 팁 (3-5개씩)
+4. **Branding Messages** (30개): 자기소개, LinkedIn 헤드라인, 엘리베이터 피치, 해시태그
 
 **성능:**
 - 처리 시간: <1초
@@ -211,17 +211,11 @@ PSA 결과 기반 맞춤형 질문 선택 시스템:
 
 **핵심 파일:**
 - `lib/soul-questions/matching-logic.ts` - 질문 매칭 로직
-- `lib/soul-questions/reframing-strategy.ts` - 저점수 카테고리 리프레이밍
 
 **질문 선택 로직 (`selectSoulQuestions`):**
 1. 고정 질문 `soul_identity_1` 항상 포함
 2. PSA 상위 카테고리와 매칭되는 질문 우선 선택
 3. 정확히 3개 질문 반환
-
-**리프레이밍 전략 (`getReframedLowScores`):**
-- 순위 4위 이하 카테고리 필터링
-- 긍정적 관점으로 재해석된 라벨/설명 제공
-- 예: "낮은 혁신 점수" → "안정적이고 검증된 방법 선호"
 
 ## File Parsing System
 

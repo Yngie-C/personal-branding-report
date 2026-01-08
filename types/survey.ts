@@ -239,14 +239,27 @@ export interface BriefAnalysis {
 
   // Analysis
   strengthsSummary: string;      // 2-3 paragraphs
-  shadowSides?: string;          // Potential weaknesses
   brandingKeywords: string[];    // Top 3-5 keywords
 
-  // NEW: Strength scenarios
+  // Strength scenarios
   strengthsScenarios?: {
     title: string;              // Scenario title
     description: string;        // Specific description (100-150 chars)
   }[];
+
+  // NEW: Strength-focused sections (replaces lowScoreCategories & shadowSides)
+  strengthTips?: {
+    strength: string;           // 강점명
+    tip: string;                // 실무 활용 팁
+    scenario: string;           // 적용 상황
+  }[];
+
+  brandingMessages?: {
+    selfIntro: string;          // 한 줄 자기소개
+    linkedinHeadline: string;   // LinkedIn 헤드라인
+    elevatorPitch: string;      // 엘리베이터 피치
+    hashtags: string[];         // 추천 해시태그
+  };
 
   // Radar chart data
   radarData: {
@@ -254,12 +267,16 @@ export interface BriefAnalysis {
     score: number;
   }[];
 
-  // NEW: Reframing data
+  // @deprecated - 하위 호환용, 새 코드에서는 사용하지 않음
+  /** @deprecated Use strengthTips instead */
   lowScoreCategories?: {
     category: SurveyCategory;
     reframedLabel: string;
     reframedDescription: string;
   }[];
+
+  /** @deprecated Use brandingMessages instead */
+  shadowSides?: string;
 
   // NEW: Selected Soul Questions
   selectedSoulQuestions?: string[];  // Soul Question IDs

@@ -111,11 +111,29 @@ export interface BriefWebProfile {
     title: string;
     description: string;
   }[];
-  lowScoreCategories?: {                    // 일하는 스타일 (저점수 재프레이밍)
+
+  // NEW: Strength-focused sections
+  strengthTips?: {                          // 강점 활용 팁
+    strength: string;
+    tip: string;
+    scenario: string;
+  }[];
+  brandingMessages?: {                      // 브랜딩 메시지 가이드
+    selfIntro: string;
+    linkedinHeadline: string;
+    elevatorPitch: string;
+    hashtags: string[];
+  };
+
+  // @deprecated - 하위 호환용
+  /** @deprecated Use strengthTips instead */
+  lowScoreCategories?: {
     category: SurveyCategory;
     reframedLabel: string;
     reframedDescription: string;
   }[];
-  shadowSidesText?: string;                 // 시너지 파트너 섹션 텍스트
+  /** @deprecated Use brandingMessages instead */
+  shadowSidesText?: string;
+
   completionTimeSeconds?: number;           // 응답 패턴 (완료 시간)
 }

@@ -7,6 +7,14 @@ import {
 import { LowScoreReframing } from '@/types/soul-questions';
 import { STRENGTHS_TEMPLATES } from './persona-templates';
 import { SCENARIO_POOL } from './scenario-pool';
+import {
+  STRENGTH_TIPS_TEMPLATES,
+  StrengthTip,
+} from './strength-extensions/strength-tips';
+import {
+  BRANDING_MESSAGE_TEMPLATES,
+  BrandingMessages,
+} from './strength-extensions/branding-messages';
 
 /**
  * Template variant types based on score patterns
@@ -116,6 +124,7 @@ export function selectStrengthsScenarios(
 }
 
 /**
+ * @deprecated Use selectStrengthTips and selectBrandingMessages instead
  * Generate shadowSides text combining persona metadata and reframing
  *
  * @param persona - User's persona metadata
@@ -138,4 +147,94 @@ export function generateShadowSides(
     .join(', ');
 
   return `당신의 강점을 보완할 수 있는 파트너는: ${partners}입니다.\n\n특히 "${reframedLabels}" 스타일과 상반되는 강점을 가진 동료와 협업하면 시너지가 극대화됩니다.`;
+}
+
+// ==========================================
+// NEW: Strength-focused template selectors
+// ==========================================
+
+/**
+ * Select strength tips based on persona type
+ *
+ * @param personaType - User's persona type
+ * @returns Array of strength tips (3-5 tips)
+ */
+export function selectStrengthTips(personaType: PersonaType): StrengthTip[] {
+  const template = STRENGTH_TIPS_TEMPLATES.find(
+    (t) => t.personaType === personaType
+  );
+
+  if (!template) {
+    console.warn(
+      `[TemplateSelector] Strength tips not found for persona: ${personaType}, using fallback`
+    );
+    // Fallback to ARCHITECT
+    const fallback = STRENGTH_TIPS_TEMPLATES.find(
+      (t) => t.personaType === PersonaType.ARCHITECT
+    );
+    return fallback?.tips || [];
+  }
+
+  console.log(
+    `[TemplateSelector] Selected ${template.tips.length} strength tips for: ${personaType}`
+  );
+
+  return template.tips;
+}
+
+/**
+ * Select branding messages based on persona type and score pattern
+ *
+ * @param personaType - User's persona type
+ * @param categoryScores - 5 category scores (for variant selection)
+ * @returns Branding messages object
+ */
+export function selectBrandingMessages(
+  personaType: PersonaType,
+  categoryScores: CategoryScore[]
+): BrandingMessages {
+  const variant = selectVariant(categoryScores);
+
+  const template = BRANDING_MESSAGE_TEMPLATES.find(
+    (t) => t.personaType === personaType && t.variant === variant
+  );
+
+  if (!template) {
+    console.warn(
+      `[TemplateSelector] Branding messages not found for: ${personaType} (${variant}), using fallback`
+    );
+    // Fallback to same persona with 'mixed' variant
+    const fallback = BRANDING_MESSAGE_TEMPLATES.find(
+      (t) => t.personaType === personaType && t.variant === 'mixed'
+    );
+    if (fallback) {
+      return {
+        selfIntro: fallback.selfIntro,
+        linkedinHeadline: fallback.linkedinHeadline,
+        elevatorPitch: fallback.elevatorPitch,
+        hashtags: fallback.hashtags,
+      };
+    }
+    // Ultimate fallback to ARCHITECT mixed
+    const ultimate = BRANDING_MESSAGE_TEMPLATES.find(
+      (t) => t.personaType === PersonaType.ARCHITECT && t.variant === 'mixed'
+    );
+    return {
+      selfIntro: ultimate?.selfIntro || '',
+      linkedinHeadline: ultimate?.linkedinHeadline || '',
+      elevatorPitch: ultimate?.elevatorPitch || '',
+      hashtags: ultimate?.hashtags || [],
+    };
+  }
+
+  console.log(
+    `[TemplateSelector] Selected branding messages for: ${personaType} (${variant})`
+  );
+
+  return {
+    selfIntro: template.selfIntro,
+    linkedinHeadline: template.linkedinHeadline,
+    elevatorPitch: template.elevatorPitch,
+    hashtags: template.hashtags,
+  };
 }
