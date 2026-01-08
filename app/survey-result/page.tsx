@@ -842,35 +842,35 @@ export default function SurveyResultPage() {
           {/* Strength Tips */}
           {analysis.strengthTips && analysis.strengthTips.length > 0 && (
             <motion.div
-              className="bg-gradient-to-br from-amber-50/90 to-orange-50/90 backdrop-blur-2xl rounded-3xl p-8 md:p-10 border border-amber-200/50 shadow-xl"
+              className="bg-white/10 backdrop-blur-2xl rounded-3xl p-8 md:p-10 border border-white/20 shadow-xl"
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-100px" }}
               transition={{ duration: 0.6 }}
             >
               <div className="flex items-center gap-3 mb-4">
-                 <div className="p-2 bg-white/50 rounded-xl">
-                    <Lightbulb className="w-6 h-6 text-amber-600" />
+                 <div className="p-2 bg-white/10 rounded-xl">
+                    <Lightbulb className="w-6 h-6 text-white" />
                  </div>
-                <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-amber-900">
+                <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-white">
                   강점 활용 팁
                 </h2>
               </div>
-              <p className="text-amber-800/80 mb-8 leading-relaxed font-medium">
+              <p className="text-white/70 mb-8 leading-relaxed font-medium">
                 당신의 핵심 강점을 실무에서 더욱 빛나게 활용하는 방법입니다.
               </p>
 
               <div className="space-y-4">
                 {analysis.strengthTips.map((tip, index) => (
-                  <div key={index} className="bg-white/80 rounded-2xl p-6 shadow-sm border border-amber-100/50 hover:bg-white/95 transition-colors">
+                  <div key={index} className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 shadow-lg border border-white/20 hover:bg-white/20 hover:border-white/30 transition-all">
                     <div className="flex items-center gap-2 mb-3">
-                      <span className="px-3 py-1 bg-amber-100 text-amber-800 rounded-lg text-xs font-bold uppercase tracking-wider">
+                      <span className="px-3 py-1 bg-white/20 text-white/90 rounded-lg text-xs font-bold uppercase tracking-wider border border-white/30">
                         {tip.strength}
                       </span>
                     </div>
-                    <p className="text-slate-800 leading-relaxed mb-3 font-medium">{tip.tip}</p>
-                    <div className="flex items-center gap-2 text-sm text-slate-500 bg-slate-50 p-3 rounded-xl">
-                        <span className="text-amber-500">📌</span>
+                    <p className="text-white/90 leading-relaxed mb-3 font-medium">{tip.tip}</p>
+                    <div className="flex items-center gap-2 text-sm text-white/70 bg-white/10 p-3 rounded-xl border border-white/10">
+                        <span className="text-amber-300">📌</span>
                         <span className="italic">{tip.scenario}</span>
                     </div>
                   </div>
@@ -939,7 +939,7 @@ export default function SurveyResultPage() {
 
           {/* 2X2 CTA GRID - Always visible */}
           <motion.div
-            className="bg-white/90 backdrop-blur-2xl rounded-3xl shadow-2xl p-8 border border-white/50"
+            className="bg-white/10 backdrop-blur-2xl rounded-3xl shadow-2xl p-8 border border-white/20"
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-100px" }}
@@ -947,10 +947,10 @@ export default function SurveyResultPage() {
           >
             {/* Section Header */}
             <div className="text-center mb-8">
-              <h2 className="text-2xl font-bold text-slate-900 mb-2">
+              <h2 className="text-2xl font-bold text-white mb-2">
                 이 분석 결과를 활용하세요
               </h2>
-              <p className="text-slate-600 text-sm font-medium">
+              <p className="text-white/70 text-sm font-medium">
                 웹 프로필을 공유하거나 정식 서비스 출시 알림을 받으세요
               </p>
             </div>
@@ -960,11 +960,11 @@ export default function SurveyResultPage() {
               {/* Row 1, Col 1: Share Result URL */}
               <Button
                 onClick={handleShareResultUrl}
-                className="min-h-[100px] h-auto py-5 flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-purple-600 to-indigo-700 hover:from-purple-500 hover:to-indigo-600 text-white transition-all hover:scale-[1.02] hover:shadow-lg shadow-purple-900/20 rounded-2xl border border-white/10"
+                className="min-h-[100px] h-auto py-5 flex flex-col items-center justify-center gap-2 bg-white/10 backdrop-blur-xl text-white transition-all hover:scale-[1.02] hover:bg-white/15 shadow-lg rounded-2xl border border-purple-400/30 hover:border-purple-400/50"
               >
                 <Share2 className="w-6 h-6 mb-1" />
                 <span className="text-base font-bold text-center leading-tight">내 결과 공유하기</span>
-                <span className="text-xs opacity-80 text-center leading-tight font-normal">
+                <span className="text-xs text-white/60 text-center leading-tight font-normal">
                   {webProfileUrl ? '웹 프로필 링크 복사' : '클릭하여 링크 생성'}
                 </span>
               </Button>
@@ -972,21 +972,21 @@ export default function SurveyResultPage() {
               {/* Row 1, Col 2: Share Landing Page */}
               <Button
                 onClick={handleShareLandingUrl}
-                className="min-h-[100px] h-auto py-5 flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-blue-600 to-cyan-700 hover:from-blue-500 hover:to-cyan-600 text-white transition-all hover:scale-[1.02] hover:shadow-lg shadow-blue-900/20 rounded-2xl border border-white/10"
+                className="min-h-[100px] h-auto py-5 flex flex-col items-center justify-center gap-2 bg-white/10 backdrop-blur-xl text-white transition-all hover:scale-[1.02] hover:bg-white/15 shadow-lg rounded-2xl border border-blue-400/30 hover:border-blue-400/50"
               >
                 <Globe className="w-6 h-6 mb-1" />
                 <span className="text-base font-bold text-center leading-tight">진단 테스트 공유하기</span>
-                <span className="text-xs opacity-80 text-center leading-tight font-normal">PSA 설문 링크 복사</span>
+                <span className="text-xs text-white/60 text-center leading-tight font-normal">PSA 설문 링크 복사</span>
               </Button>
 
               {/* Row 2, Full Width: Waitlist Registration */}
               <Button
                 onClick={() => setShowWaitlistForm(true)}
-                className={`min-h-[100px] h-auto py-5 md:col-span-2 flex flex-col items-center justify-center gap-2 bg-gradient-to-br ${theme?.gradient || 'from-amber-600 to-orange-600'} hover:brightness-110 text-white transition-all hover:scale-[1.02] shadow-lg rounded-2xl border border-white/10`}
+                className="min-h-[100px] h-auto py-5 md:col-span-2 flex flex-col items-center justify-center gap-2 bg-white/10 backdrop-blur-xl text-white transition-all hover:scale-[1.02] hover:bg-white/15 shadow-lg rounded-2xl border border-amber-400/30 hover:border-amber-400/50"
               >
                 <Sparkles className="w-6 h-6 mb-1" />
                 <span className="text-lg font-bold text-center leading-tight">대기자 명단 등록하기</span>
-                <span className="text-xs opacity-90 text-center leading-tight font-normal">
+                <span className="text-xs text-white/60 text-center leading-tight font-normal">
                   이력서 기반 심층 분석 정식 출시 시 우선 연락
                 </span>
               </Button>
@@ -994,10 +994,10 @@ export default function SurveyResultPage() {
 
             {/* Inline Feedback Message */}
             {copiedMessage && (
-              <div className={`p-4 border rounded-xl text-center text-sm font-medium shadow-sm animate-in fade-in slide-in-from-bottom-2 ${
+              <div className={`p-4 border rounded-xl text-center text-sm font-medium shadow-sm animate-in fade-in slide-in-from-bottom-2 backdrop-blur-xl ${
                 copiedMessage.startsWith('✅')
-                  ? 'bg-green-50 border-green-200 text-green-700'
-                  : 'bg-red-50 border-red-200 text-red-700'
+                  ? 'bg-green-500/20 border-green-400/30 text-green-300'
+                  : 'bg-red-500/20 border-red-400/30 text-red-300'
               }`}>
                 {copiedMessage}
               </div>
