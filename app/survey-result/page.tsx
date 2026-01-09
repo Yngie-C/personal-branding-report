@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from "recharts";
-import { TrendingUp, Award, AlertCircle, ArrowRight, Sparkles, Share2, Globe, Mail, CheckCircle, Clock, Lightbulb, MessageSquare, Copy } from "lucide-react";
+import { TrendingUp, Award, AlertCircle, ArrowRight, Sparkles, Share2, Globe, Mail, CheckCircle, Clock, Lightbulb, MessageSquare, Copy, Bell } from "lucide-react";
 import { BriefAnalysis, CategoryLabels, SurveyAnswer } from "@/types/survey";
 import {
   Dialog,
@@ -772,14 +772,9 @@ export default function SurveyResultPage() {
             viewport={{ once: true, margin: "-100px" }}
             transition={{ duration: 0.6 }}
           >
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-3 rounded-2xl bg-purple-100">
-                <Award className={`w-6 h-6 ${theme?.textClass || 'text-purple-600'}`} />
-              </div>
-              <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-900">
-                강점 분석
-              </h2>
-            </div>
+            <h2 className={`text-2xl md:text-3xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r ${theme?.gradient || 'from-purple-900 to-indigo-900'} mb-6`}>
+              강점 분석
+            </h2>
             <div className="space-y-6">
               {analysis.strengthsSummary.split('\n\n').map((paragraph, i) => (
                 <div key={i} className="flex items-start gap-4 p-4 bg-white/50 rounded-2xl border border-white/60">
@@ -814,20 +809,15 @@ export default function SurveyResultPage() {
               viewport={{ once: true, margin: "-100px" }}
               transition={{ duration: 0.6 }}
             >
-              <div className="flex items-center gap-3 mb-8">
-                <div className="p-3 bg-amber-100 rounded-2xl">
-                  <Lightbulb className="w-6 h-6 text-amber-600" />
-                </div>
-                <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-900">
-                  이런 상황에서 강점이 빛납니다
-                </h2>
-              </div>
+              <h2 className={`text-2xl md:text-3xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r ${theme?.gradient || 'from-purple-900 to-indigo-900'} mb-8`}>
+                이런 상황에서 강점이 빛납니다
+              </h2>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {analysis.strengthsScenarios.map((scenario, i) => (
-                  <div key={i} className="bg-gradient-to-br from-amber-50/80 to-orange-50/80 rounded-2xl p-6 border border-amber-100/60 shadow-sm hover:shadow-md transition-shadow">
+                  <div key={i} className="bg-white/90 rounded-2xl p-6 border border-slate-200/60 shadow-sm hover:shadow-md transition-shadow">
                     <div className="flex items-center gap-3 mb-3">
-                      <div className="w-8 h-8 bg-amber-500 text-white rounded-xl flex items-center justify-center font-bold text-sm shadow-md shadow-amber-200">
+                      <div className={`w-8 h-8 ${getProgressBarColor(0, analysis.topCategories[0])} text-white rounded-xl flex items-center justify-center font-bold text-sm shadow-md`}>
                         {i + 1}
                       </div>
                       <h3 className="font-bold text-slate-800">{scenario.title}</h3>
@@ -939,7 +929,7 @@ export default function SurveyResultPage() {
 
           {/* 2X2 CTA GRID - Always visible */}
           <motion.div
-            className="bg-white/10 backdrop-blur-2xl rounded-3xl shadow-2xl p-8 border border-white/20"
+            className="bg-white/10 backdrop-blur-2xl rounded-3xl shadow-2xl p-8 border-2 border-white/30"
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-100px" }}
@@ -984,10 +974,12 @@ export default function SurveyResultPage() {
                 onClick={() => setShowWaitlistForm(true)}
                 className="min-h-[100px] h-auto py-5 md:col-span-2 flex flex-col items-center justify-center gap-2 bg-white/10 backdrop-blur-xl text-white transition-all hover:scale-[1.02] hover:bg-white/15 shadow-lg rounded-2xl border border-amber-400/30 hover:border-amber-400/50"
               >
-                <Sparkles className="w-6 h-6 mb-1" />
+                <Bell className="w-6 h-6 mb-1" />
                 <span className="text-lg font-bold text-center leading-tight">대기자 명단 등록하기</span>
                 <span className="text-xs text-white/60 text-center leading-tight font-normal">
-                  이력서 기반 심층 분석 정식 출시 시 우선 연락
+                  이력서 기반 심층 분석을 통한<br className="sm:hidden" />
+                  퍼스널 브랜딩 리포트 서비스<br className="sm:hidden" />
+                  정식 출시 시 우선 연락
                 </span>
               </Button>
             </div>
