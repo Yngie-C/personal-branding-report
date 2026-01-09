@@ -47,6 +47,12 @@ export default function SurveyResultPage() {
   // Copy feedback state
   const [copiedMessage, setCopiedMessage] = useState<string>("");
 
+  // Share modal state
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareModalStatus, setShareModalStatus] = useState<'loading' | 'success' | 'error'>('loading');
+  const [generatedProfileUrl, setGeneratedProfileUrl] = useState<string>("");
+  const [shareError, setShareError] = useState<string>("");
+
   // Statistics state for average line
   const [statistics, setStatistics] = useState<{
     averages: Record<string, number>;
@@ -264,75 +270,95 @@ export default function SurveyResultPage() {
   };
 
   const handleShareResultUrl = async () => {
-    // If no webProfileUrl, create anonymous session first
-    if (!webProfileUrl) {
-      if (!analysis || !answers || answers.length !== 60) {
-        setCopiedMessage("❌ 설문 데이터를 찾을 수 없습니다.");
-        setTimeout(() => setCopiedMessage(""), 3000);
-        return;
-      }
-
-      setCopiedMessage("🔄 웹 프로필 링크를 생성하는 중...");
+    // If webProfileUrl already exists, just copy it and show success modal
+    if (webProfileUrl) {
+      const fullUrl = `${window.location.origin}${webProfileUrl}`;
+      setGeneratedProfileUrl(fullUrl);
+      setShareModalStatus('success');
+      setShowShareModal(true);
 
       try {
-        // Create anonymous session with temporary email
-        const anonymousEmail = `anonymous-${Date.now()}@temp.local`;
-
-        const response = await fetch("/api/survey/save-with-email", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email: anonymousEmail,
-            answers,
-            analysis,
-          }),
-        });
-
-        const result = await response.json();
-
-        if (!response.ok) {
-          throw new Error(result.error || "세션 생성에 실패했습니다.");
-        }
-
-        // Save session data
-        const newSessionId = result.data.sessionId;
-        const profileUrl = result.data.webProfileUrl;
-
-        localStorage.setItem("sessionId", newSessionId);
-        setSessionId(newSessionId);
-        setWebProfileSlug(result.data.webProfileSlug);
-        setWebProfileUrl(profileUrl);
-
-        // Clear temporary data
-        localStorage.removeItem("survey-analysis");
-        localStorage.removeItem("survey-answers");
-        localStorage.removeItem("survey-question-order");
-        localStorage.removeItem("survey-seed");
-
-        // Copy the generated link
-        const fullUrl = `${window.location.origin}${profileUrl}`;
         await navigator.clipboard.writeText(fullUrl);
-        setCopiedMessage("✅ 내 결과 링크가 생성되고 복사되었습니다!");
-        setTimeout(() => setCopiedMessage(""), 3000);
-
-      } catch (error: any) {
-        console.error("Anonymous session creation error:", error);
-        setCopiedMessage("❌ 링크 생성에 실패했습니다. 다시 시도해주세요.");
-        setTimeout(() => setCopiedMessage(""), 5000);
+      } catch (error) {
+        console.error("Clipboard copy failed:", error);
       }
       return;
     }
 
-    // If webProfileUrl already exists, just copy it
-    const fullUrl = `${window.location.origin}${webProfileUrl}`;
+    // If no webProfileUrl, create anonymous session first
+    if (!analysis || !answers || answers.length !== 60) {
+      setShareError("설문 데이터를 찾을 수 없습니다.");
+      setShareModalStatus('error');
+      setShowShareModal(true);
+      return;
+    }
+
+    // Show loading modal
+    setShareModalStatus('loading');
+    setShowShareModal(true);
 
     try {
-      await navigator.clipboard.writeText(fullUrl);
-      setCopiedMessage("✅ 내 결과 링크가 복사되었습니다!");
-      setTimeout(() => setCopiedMessage(""), 3000);
+      // Create anonymous session with temporary email
+      const anonymousEmail = `anonymous-${Date.now()}@temp.local`;
+
+      const response = await fetch("/api/survey/save-with-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: anonymousEmail,
+          answers,
+          analysis,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "세션 생성에 실패했습니다.");
+      }
+
+      // Save session data
+      const newSessionId = result.data.sessionId;
+      const profileUrl = result.data.webProfileUrl;
+
+      localStorage.setItem("sessionId", newSessionId);
+      setSessionId(newSessionId);
+      setWebProfileSlug(result.data.webProfileSlug);
+      setWebProfileUrl(profileUrl);
+
+      // Clear temporary data
+      localStorage.removeItem("survey-analysis");
+      localStorage.removeItem("survey-answers");
+      localStorage.removeItem("survey-question-order");
+      localStorage.removeItem("survey-seed");
+
+      // Copy the generated link and show success
+      const fullUrl = `${window.location.origin}${profileUrl}`;
+      setGeneratedProfileUrl(fullUrl);
+      setShareModalStatus('success');
+
+      try {
+        await navigator.clipboard.writeText(fullUrl);
+      } catch (clipboardError) {
+        console.error("Clipboard copy failed:", clipboardError);
+      }
+
+    } catch (error: any) {
+      console.error("Anonymous session creation error:", error);
+      setShareError(error.message || "링크 생성에 실패했습니다. 다시 시도해주세요.");
+      setShareModalStatus('error');
+    }
+  };
+
+  const handleCopyProfileUrl = async () => {
+    if (!generatedProfileUrl) return;
+
+    try {
+      await navigator.clipboard.writeText(generatedProfileUrl);
+      setCopiedMessage("✅ 링크가 복사되었습니다!");
+      setTimeout(() => setCopiedMessage(""), 2000);
     } catch (error) {
-      setCopiedMessage("❌ 링크 복사에 실패했습니다. 다시 시도해주세요.");
-      setTimeout(() => setCopiedMessage(""), 5000);
+      console.error("Clipboard copy failed:", error);
     }
   };
 
@@ -1139,6 +1165,166 @@ export default function SurveyResultPage() {
               </DialogContent>
             </Dialog>
           )}
+
+          {/* SHARE PROFILE MODAL */}
+          <Dialog open={showShareModal} onOpenChange={setShowShareModal}>
+            <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-md bg-slate-900/95 backdrop-blur-xl border border-white/10 text-white shadow-2xl rounded-3xl">
+              {/* Loading State */}
+              {shareModalStatus === 'loading' && (
+                <>
+                  <DialogHeader className="pt-2">
+                    <DialogTitle className="text-center text-2xl text-white font-bold">
+                      웹 프로필 생성 중
+                    </DialogTitle>
+                    <DialogDescription className="text-center text-gray-300">
+                      잠시만 기다려주세요...
+                    </DialogDescription>
+                  </DialogHeader>
+
+                  <div className="py-12 flex flex-col items-center justify-center">
+                    <div className="relative">
+                      <div className="w-16 h-16 border-4 border-white/20 rounded-full"></div>
+                      <div className="absolute top-0 left-0 w-16 h-16 border-4 border-transparent border-t-purple-500 rounded-full animate-spin"></div>
+                    </div>
+                    <p className="mt-6 text-white/70 text-sm font-medium">
+                      공유 가능한 링크를 만들고 있습니다
+                    </p>
+                  </div>
+                </>
+              )}
+
+              {/* Success State */}
+              {shareModalStatus === 'success' && (
+                <>
+                  <DialogHeader className="pt-2">
+                    <DialogTitle className="text-center text-2xl text-white font-bold">
+                      링크가 생성되었습니다!
+                    </DialogTitle>
+                    <DialogDescription className="text-center text-gray-300">
+                      링크가 클립보드에 복사되었습니다
+                    </DialogDescription>
+                  </DialogHeader>
+
+                  <div className="py-6">
+                    {/* Success Icon */}
+                    <div className="flex justify-center mb-6">
+                      <div className={`w-16 h-16 rounded-full bg-gradient-to-br ${theme?.gradient || 'from-purple-600 to-indigo-600'} flex items-center justify-center shadow-lg ${theme?.shadowClass || 'shadow-purple-600/30'}`}>
+                        <CheckCircle className="w-8 h-8 text-white" />
+                      </div>
+                    </div>
+
+                    {/* URL Display */}
+                    <div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-4">
+                      <p className="text-xs text-gray-400 mb-2 font-medium">공유 링크</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-white text-sm font-mono flex-1 truncate">
+                          {generatedProfileUrl}
+                        </p>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={handleCopyProfileUrl}
+                          className="shrink-0 h-8 px-3 bg-white/10 hover:bg-white/20 text-white rounded-lg"
+                        >
+                          <Copy className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Copy feedback */}
+                    {copiedMessage && (
+                      <div className="text-center text-sm text-green-400 font-medium animate-in fade-in">
+                        {copiedMessage}
+                      </div>
+                    )}
+
+                    {/* Info */}
+                    <div className="space-y-3 mt-4 text-sm text-gray-300 bg-white/5 rounded-2xl p-4 border border-white/5">
+                      <div className="flex items-center gap-3">
+                        <div className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0 border border-green-500/30">
+                          <span className="text-green-400 text-xs font-bold">✓</span>
+                        </div>
+                        <p className="font-medium">누구나 이 링크로 결과를 볼 수 있습니다</p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0 border border-blue-500/30">
+                          <Share2 className="w-3 h-3 text-blue-400" />
+                        </div>
+                        <p className="font-medium">SNS, 메신저 등에 공유해보세요</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <DialogFooter className="gap-3 sm:gap-2">
+                    <Button
+                      onClick={() => {
+                        if (generatedProfileUrl) {
+                          window.open(generatedProfileUrl, '_blank');
+                        }
+                      }}
+                      variant="outline"
+                      className="flex-1 py-5 rounded-xl border-white/10 bg-white/5 hover:bg-white/10 text-gray-200 hover:text-white"
+                    >
+                      프로필 보기
+                    </Button>
+                    <Button
+                      onClick={() => setShowShareModal(false)}
+                      className={`flex-1 py-5 rounded-xl bg-gradient-to-r ${theme?.gradient || 'from-purple-600 to-indigo-600'} hover:brightness-110 shadow-lg`}
+                    >
+                      확인
+                    </Button>
+                  </DialogFooter>
+                </>
+              )}
+
+              {/* Error State */}
+              {shareModalStatus === 'error' && (
+                <>
+                  <DialogHeader className="pt-2">
+                    <DialogTitle className="text-center text-2xl text-white font-bold">
+                      오류가 발생했습니다
+                    </DialogTitle>
+                    <DialogDescription className="text-center text-gray-300">
+                      다시 시도해주세요
+                    </DialogDescription>
+                  </DialogHeader>
+
+                  <div className="py-6">
+                    {/* Error Icon */}
+                    <div className="flex justify-center mb-6">
+                      <div className="w-16 h-16 rounded-full bg-gradient-to-br from-red-600 to-rose-600 flex items-center justify-center shadow-lg shadow-red-600/30">
+                        <AlertCircle className="w-8 h-8 text-white" />
+                      </div>
+                    </div>
+
+                    {/* Error Message */}
+                    <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 text-center">
+                      <p className="text-red-200 font-medium">{shareError}</p>
+                    </div>
+                  </div>
+
+                  <DialogFooter className="gap-3 sm:gap-2">
+                    <Button
+                      onClick={() => setShowShareModal(false)}
+                      variant="outline"
+                      className="flex-1 py-5 rounded-xl border-white/10 bg-white/5 hover:bg-white/10 text-gray-200 hover:text-white"
+                    >
+                      닫기
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        setShowShareModal(false);
+                        setTimeout(() => handleShareResultUrl(), 100);
+                      }}
+                      className={`flex-1 py-5 rounded-xl bg-gradient-to-r ${theme?.gradient || 'from-purple-600 to-indigo-600'} hover:brightness-110 shadow-lg`}
+                    >
+                      다시 시도
+                    </Button>
+                  </DialogFooter>
+                </>
+              )}
+            </DialogContent>
+          </Dialog>
 
         </div>
       </section>
