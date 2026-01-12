@@ -56,11 +56,16 @@ export async function POST(request: Request) {
       );
     }
 
-    // 세션 상태 업데이트
+    // 세션 상태 업데이트: questions_completed = true, status = 'processing'
     await supabaseAdmin
       .from('report_sessions')
-      .update({ status: 'processing', updated_at: new Date().toISOString() })
+      .update({
+        status: 'processing',
+        questions_completed: true,
+        updated_at: new Date().toISOString(),
+      })
       .eq('id', sessionId);
+    console.log(`[Questions API] Session ${sessionId} marked as questions_completed`);
 
     return NextResponse.json({
       success: true,

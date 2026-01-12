@@ -9,6 +9,7 @@ import UploadPageHeader from "@/components/upload/UploadPageHeader";
 import ResultPageHeader from "@/components/result/ResultPageHeader";
 import DownloadSection from "@/components/result/DownloadSection";
 import SocialAssetsSection from "@/components/result/SocialAssetsSection";
+import { useSessionValidation } from "@/hooks/useSessionValidation";
 
 interface ResultData {
   reportId: string;
@@ -29,39 +30,27 @@ type PageStatus = 'loading' | 'success' | 'processing' | 'error';
 
 export default function ResultPage() {
   const router = useRouter();
-  const [sessionId, setSessionId] = useState<string | null>(null);
-  const [status, setStatus] = useState<PageStatus>('loading');
+  const { sessionId, isLoading: sessionLoading, isValidated, status: sessionStatus } = useSessionValidation();
+  const [pageStatus, setPageStatus] = useState<PageStatus>('loading');
   const [resultData, setResultData] = useState<ResultData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isRetrying, setIsRetrying] = useState(false);
-
-  // 세션 로드
-  useEffect(() => {
-    const storedSessionId = localStorage.getItem("sessionId");
-    if (!storedSessionId) {
-      router.push("/survey-result");
-      return;
-    }
-    setSessionId(storedSessionId);
-  }, [router]);
 
   // 결과 데이터 가져오기
   const fetchResults = useCallback(async () => {
     if (!sessionId) return;
 
     try {
-      setStatus('loading');
+      setPageStatus('loading');
       setError(null);
 
       const response = await fetch(`/api/results?sessionId=${sessionId}`);
       const data = await response.json();
 
       if (response.status === 202) {
-        // 아직 생성 중 - /generating으로 리다이렉트
-        setStatus('processing');
-        setTimeout(() => {
-          router.push("/generating");
-        }, 1500);
+        // 아직 생성 중 - /generating으로 즉시 리다이렉트
+        setPageStatus('processing');
+        router.push("/generating");
         return;
       }
 
@@ -70,20 +59,24 @@ export default function ResultPage() {
       }
 
       setResultData(data.data);
-      setStatus('success');
+      setPageStatus('success');
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.';
       setError(message);
-      setStatus('error');
+      setPageStatus('error');
     }
   }, [sessionId, router]);
 
-  // sessionId가 설정되면 결과 가져오기
+  // 세션 검증 완료 후 결과 가져오기
   useEffect(() => {
-    if (sessionId) {
+    if (isValidated && sessionId) {
+      // processing 상태면 generating으로 리다이렉트 (hook이 이미 처리함)
+      if (sessionStatus?.phase2.generationStatus === 'processing') {
+        return;
+      }
       fetchResults();
     }
-  }, [sessionId, fetchResults]);
+  }, [isValidated, sessionId, sessionStatus, fetchResults]);
 
   // 재시도 핸들러
   const handleRetry = async () => {
@@ -107,8 +100,8 @@ export default function ResultPage() {
     router.push("/");
   };
 
-  // 로딩 상태
-  if (status === 'loading' || !sessionId) {
+  // 로딩 상태 (세션 검증 중 또는 결과 로딩 중)
+  if (sessionLoading || !isValidated || pageStatus === 'loading' || !sessionId) {
     return (
       <main className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="text-center">
@@ -120,20 +113,20 @@ export default function ResultPage() {
   }
 
   // 아직 생성 중 상태
-  if (status === 'processing') {
+  if (pageStatus === 'processing') {
     return (
       <main className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-10 h-10 text-indigo-600 animate-spin mx-auto mb-4" />
           <p className="text-gray-900 font-medium">리포트가 아직 생성 중입니다</p>
-          <p className="text-gray-600 text-sm mt-1">잠시 후 진행 상황 페이지로 이동합니다...</p>
+          <p className="text-gray-600 text-sm mt-1">진행 상황 페이지로 이동합니다...</p>
         </div>
       </main>
     );
   }
 
   // 에러 상태
-  if (status === 'error') {
+  if (pageStatus === 'error') {
     return (
       <main className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 px-4 py-8">
         <div className="max-w-2xl mx-auto">

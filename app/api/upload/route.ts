@@ -98,6 +98,18 @@ export async function POST(request: Request) {
       );
     }
 
+    // Update session status: upload_completed = true (for resume uploads)
+    if (fileType === 'resume') {
+      await supabaseAdmin
+        .from('report_sessions')
+        .update({
+          upload_completed: true,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', sessionId);
+      console.log(`[Upload] Session ${sessionId} marked as upload_completed`);
+    }
+
     return NextResponse.json({
       upload,
       message: '파일이 성공적으로 업로드되었습니다.',

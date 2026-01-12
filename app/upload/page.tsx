@@ -11,35 +11,26 @@ import ResumeFileUpload from "@/components/forms/ResumeFileUpload";
 import ResumeFormInput from "@/components/forms/ResumeFormInput";
 import ParsedPreview from "@/components/upload/ParsedPreview";
 import { ResumeFormInput as ResumeFormData } from "@/types/resume-form";
+import { useSessionValidation } from "@/hooks/useSessionValidation";
 
 export default function UploadPage() {
   const router = useRouter();
-  const [sessionId, setSessionId] = useState<string | null>(null);
+  const { sessionId, isLoading, isValidated } = useSessionValidation();
   const [activeTab, setActiveTab] = useState<string>("form");
   const [parsedFormData, setParsedFormData] = useState<ResumeFormData | null>(null);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [resumeCompleted, setResumeCompleted] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
 
-  // 세션 로드
+  // 탭 상태 복원 (세션 검증 완료 후)
   useEffect(() => {
-    const storedSessionId = localStorage.getItem("sessionId");
-    if (!storedSessionId) {
-      // 세션이 없으면 survey-result로 리다이렉트
-      router.push("/survey-result");
-      return;
-    }
-    setSessionId(storedSessionId);
+    if (!isValidated) return;
 
-    // 탭 상태 복원
     const storedTab = localStorage.getItem("upload-tab");
     if (storedTab) {
       setActiveTab(storedTab);
     }
-
-    setIsLoading(false);
-  }, [router]);
+  }, [isValidated]);
 
   // 탭 변경 시 저장
   useEffect(() => {
@@ -119,7 +110,7 @@ export default function UploadPage() {
     router.push("/survey-result");
   };
 
-  if (isLoading) {
+  if (isLoading || !isValidated) {
     return (
       <main className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="animate-pulse text-gray-500">로딩 중...</div>

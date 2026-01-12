@@ -96,7 +96,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Update session status: upload_completed = true
+    await supabaseAdmin
+      .from('report_sessions')
+      .update({
+        upload_completed: true,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', sessionId);
+
     console.log(`[ResumeForm] Successfully saved form input with ID: ${upload.id}`);
+    console.log(`[ResumeForm] Session ${sessionId} marked as upload_completed`);
 
     return NextResponse.json({
       data: upload,

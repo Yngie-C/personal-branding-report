@@ -14,34 +14,21 @@ import {
 import { Button } from "@/components/ui/button";
 import UploadPageHeader from "@/components/upload/UploadPageHeader";
 import type { GenerationProgress, ProgressStep } from "@/lib/progress-tracker";
+import { useSessionValidation } from "@/hooks/useSessionValidation";
 
 // 폴링 간격 (ms)
 const POLL_INTERVAL = 2000;
 
-// 자동 리다이렉트 딜레이 (ms)
-const REDIRECT_DELAY = 2000;
-
 export default function GeneratingPage() {
   const router = useRouter();
-  const [sessionId, setSessionId] = useState<string | null>(null);
+  const { sessionId, isLoading: sessionLoading, isValidated } = useSessionValidation();
   const [progress, setProgress] = useState<GenerationProgress | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isRetrying, setIsRetrying] = useState(false);
+  const [hasStartedGeneration, setHasStartedGeneration] = useState(false);
 
   // 폴링 인터벌 참조
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
-
-  // 세션 로드
-  useEffect(() => {
-    const storedSessionId = localStorage.getItem("sessionId");
-    if (!storedSessionId) {
-      router.push("/questions");
-      return;
-    }
-    setSessionId(storedSessionId);
-    setIsLoading(false);
-  }, [router]);
 
   // 진행 상황 폴링
   const pollProgress = useCallback(async () => {
@@ -64,10 +51,8 @@ export default function GeneratingPage() {
           clearInterval(pollIntervalRef.current);
           pollIntervalRef.current = null;
         }
-        // 완료 후 자동 리다이렉트
-        setTimeout(() => {
-          router.push("/result");
-        }, REDIRECT_DELAY);
+        // 완료 후 즉시 리다이렉트
+        router.push("/result");
       } else if (progressData.overallStatus === "failed") {
         if (pollIntervalRef.current) {
           clearInterval(pollIntervalRef.current);
@@ -82,15 +67,40 @@ export default function GeneratingPage() {
     }
   }, [sessionId, router]);
 
-  // 폴링 시작
+  // 자동 생성 시작 및 폴링
   useEffect(() => {
-    if (!sessionId) return;
+    if (!isValidated || !sessionId) return;
 
-    // 즉시 한 번 호출
-    pollProgress();
+    const startGenerationIfNeeded = async () => {
+      try {
+        // 먼저 현재 상태 확인
+        const response = await fetch(`/api/generate?sessionId=${sessionId}`);
+        const data = await response.json();
 
-    // 주기적 폴링 시작
-    pollIntervalRef.current = setInterval(pollProgress, POLL_INTERVAL);
+        // 404이거나 진행 중인 데이터가 없으면 생성 시작
+        if (response.status === 404 || !data.data?.steps?.length) {
+          if (!hasStartedGeneration) {
+            console.log("[Generating] Starting generation...");
+            setHasStartedGeneration(true);
+            await fetch("/api/generate", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ sessionId }),
+            });
+          }
+        }
+      } catch (error) {
+        console.error("[Generating] Auto-start check failed:", error);
+      }
+
+      // 폴링 시작 (아직 시작되지 않았다면)
+      if (!pollIntervalRef.current) {
+        pollProgress();
+        pollIntervalRef.current = setInterval(pollProgress, POLL_INTERVAL);
+      }
+    };
+
+    startGenerationIfNeeded();
 
     // 클린업
     return () => {
@@ -99,11 +109,17 @@ export default function GeneratingPage() {
         pollIntervalRef.current = null;
       }
     };
-  }, [sessionId, pollProgress]);
+  }, [isValidated, sessionId, hasStartedGeneration, pollProgress]);
 
   // 재시도 핸들러
   const handleRetry = async () => {
     if (!sessionId) return;
+
+    // 기존 폴링 정리
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
+    }
 
     setIsRetrying(true);
     setError(null);
@@ -132,8 +148,8 @@ export default function GeneratingPage() {
     }
   };
 
-  // 로딩 중
-  if (isLoading) {
+  // 로딩 중 (세션 검증 중)
+  if (sessionLoading || !isValidated) {
     return (
       <main className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
         <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />

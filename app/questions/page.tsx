@@ -7,6 +7,7 @@ import { Loader2, AlertCircle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FocusModeQuestion } from "@/components/questions/FocusModeQuestion";
 import type { BrandingQuestions, QuestionPhaseMetadata } from "@/types/brand";
+import { useSessionValidation } from "@/hooks/useSessionValidation";
 
 // 로컬 스토리지 키
 const STORAGE_KEYS = {
@@ -92,7 +93,7 @@ function getPhaseMetadata(
 
 export default function QuestionsPage() {
   const router = useRouter();
-  const [sessionId, setSessionId] = useState<string | null>(null);
+  const { sessionId, isLoading: sessionLoading, isValidated } = useSessionValidation();
   const [questions, setQuestions] = useState<BrandingQuestions[]>([]);
   const [flatQuestions, setFlatQuestions] = useState<FlatQuestion[]>([]);
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -104,14 +105,9 @@ export default function QuestionsPage() {
   // debounce를 위한 ref
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // 세션 및 데이터 로드
+  // 세션 검증 완료 후 데이터 복원
   useEffect(() => {
-    const storedSessionId = localStorage.getItem("sessionId");
-    if (!storedSessionId) {
-      router.push("/survey-result");
-      return;
-    }
-    setSessionId(storedSessionId);
+    if (!isValidated || !sessionId) return;
 
     // 저장된 데이터 복원
     const storedQuestions = localStorage.getItem(STORAGE_KEYS.QUESTIONS);
@@ -141,7 +137,7 @@ export default function QuestionsPage() {
     }
 
     setIsLoading(false);
-  }, [router]);
+  }, [isValidated, sessionId]);
 
   // 질문 생성 API 호출
   const generateQuestions = useCallback(async () => {
@@ -267,8 +263,8 @@ export default function QuestionsPage() {
     }
   }, [currentIndex]);
 
-  // 로딩 상태
-  if (isLoading) {
+  // 로딩 상태 (세션 검증 중 또는 질문 로딩 중)
+  if (sessionLoading || !isValidated || isLoading) {
     return (
       <main className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
         <motion.div
