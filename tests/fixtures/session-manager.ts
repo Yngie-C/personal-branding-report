@@ -1,7 +1,5 @@
 import { Page } from '@playwright/test';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { generateBalancedAnswers } from './survey-answers';
-import { getMockResumeFormData } from './test-files';
 
 /**
  * SessionManager - Manages test session lifecycle
@@ -180,26 +178,40 @@ export class SessionManager {
     const sessionId = await this.createSession(page);
     console.log(`[SessionManager] Advancing session to 'resume completed' state...`);
 
-    // Submit resume form via API
-    const resumeData = getMockResumeFormData();
+    // Submit resume form via API with properly formatted data
     const response = await page.evaluate(
-      async ({ sessionId, formData }) => {
+      async ({ sessionId }) => {
         const res = await fetch('/api/resume-form', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             sessionId,
             formData: {
-              personalInfo: { name: formData.name },
-              experiences: formData.experience,
-              skills: formData.skills,
-              projects: formData.projects,
+              personalInfo: { name: '테스트 사용자' },
+              experiences: [
+                {
+                  company: 'Test Company',
+                  role: 'Product Manager',
+                  startDate: '2020-01',
+                  endDate: 'current', // API expects 'current' not boolean
+                  achievements: ['사용자 증가 2배 달성', 'AI 추천 시스템 구축'],
+                },
+              ],
+              skills: ['Product Management', 'Data Analysis', 'UX/UI Design'],
+              projects: [
+                {
+                  name: 'AI 추천 시스템',
+                  description: 'AI 기반 맞춤형 콘텐츠 추천 시스템 구축',
+                  impact: '클릭률 40% 증가',
+                  technologies: ['Python', 'TensorFlow'],
+                },
+              ],
             },
           }),
         });
         return { status: res.status, data: await res.json() };
       },
-      { sessionId, formData: resumeData }
+      { sessionId }
     );
 
     if (response.status !== 200) {
@@ -220,25 +232,26 @@ export class SessionManager {
     const sessionId = await this.createSessionWithResume(page);
     console.log(`[SessionManager] Advancing session to 'survey completed' state...`);
 
-    // Fetch actual question IDs from the API
-    const questionData = await page.evaluate(async () => {
-      const res = await fetch('/api/survey/questions');
-      return await res.json();
-    });
-
-    if (!questionData.data?.questions) {
-      throw new Error('Failed to fetch survey questions');
-    }
-
-    // Build answers using real question IDs
-    const answers: Record<string, number> = {};
-    questionData.data.questions.forEach((q: any) => {
-      answers[q.id] = 5; // Balanced score
-    });
-
-    // Submit survey
+    // Submit survey via API with properly formatted data
+    // API expects answers as an array of SurveyAnswer objects
     const submitResponse = await page.evaluate(
-      async ({ sessionId, answers }) => {
+      async ({ sessionId }) => {
+        // Fetch actual question IDs from the API
+        const questionsRes = await fetch('/api/survey/questions');
+        const questionData = await questionsRes.json();
+
+        if (!questionData.data?.questions || questionData.data.questions.length === 0) {
+          return { status: 400, data: { error: 'No survey questions found' } };
+        }
+
+        // Build answers array with proper structure (SurveyAnswer format)
+        const answers = questionData.data.questions.map((q: any) => ({
+          questionId: q.id,
+          questionNumber: q.questionNumber,
+          category: q.category,
+          score: 5, // Balanced score
+        }));
+
         const res = await fetch('/api/survey/submit', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -250,7 +263,7 @@ export class SessionManager {
         });
         return { status: res.status, data: await res.json() };
       },
-      { sessionId, answers }
+      { sessionId }
     );
 
     if (submitResponse.status !== 200) {
@@ -271,12 +284,10 @@ export class SessionManager {
       throw new Error(`Failed to analyze survey: ${JSON.stringify(analyzeResponse.data)}`);
     }
 
-    const slug = analyzeResponse.data.webProfileSlug;
-    if (!slug) {
-      throw new Error('Web profile slug not returned from analysis');
-    }
+    // webProfileSlug may be undefined if web profile generation failed (non-blocking)
+    const slug = analyzeResponse.data.webProfileSlug || '';
 
-    console.log(`[SessionManager] ✓ Survey completed, brief report generated (slug: ${slug})`);
+    console.log(`[SessionManager] ✓ Survey completed, brief report generated${slug ? ` (slug: ${slug})` : ''}`);
     return { sessionId, slug };
   }
 
@@ -320,20 +331,32 @@ export class SessionManager {
 
     // Submit question answers
     const answersResponse = await page.evaluate(async ({ sessionId }) => {
-      const res = await fetch('/api/questions/submit', {
+      // First, get the generated questions to use real IDs
+      const questionsRes = await fetch('/api/questions/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId }),
+      });
+      const questionsData = await questionsRes.json();
+      const questions = questionsData.data || [];
+
+      // Build answers object from real question IDs
+      const answers: Record<string, string> = {};
+      let answerIndex = 1;
+      for (const category of questions) {
+        for (const q of category.questions || []) {
+          answers[q.id] = `테스트 답변 ${answerIndex}: 저는 데이터 기반 의사결정을 중시하며, 사용자 중심 제품을 만드는 것을 목표로 합니다.`;
+          answerIndex++;
+        }
+      }
+
+      const res = await fetch('/api/questions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           sessionId,
-          answers: {
-            'q-1': '테스트 답변 1',
-            'q-2': '테스트 답변 2',
-            'q-3': '테스트 답변 3',
-            'q-4': '테스트 답변 4',
-            'q-5': '테스트 답변 5',
-            'q-6': '테스트 답변 6',
-            'q-7': '테스트 답변 7',
-          },
+          questions,
+          answers,
         }),
       });
       return { status: res.status, data: await res.json() };
@@ -371,20 +394,44 @@ export class SessionManager {
 
     // Submit question answers
     await page.evaluate(async ({ sessionId }) => {
-      await fetch('/api/questions/submit', {
+      // First, get the generated questions to use real IDs
+      const questionsRes = await fetch('/api/questions/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId }),
+      });
+      const questionsData = await questionsRes.json();
+      const questions = questionsData.data || [];
+
+      // Build answers object from real question IDs with detailed responses
+      const detailedAnswers = [
+        '5년 경력의 프로덕트 매니저로서 데이터 기반 의사결정을 중시합니다.',
+        '사용자 피드백을 제품 개선에 반영하는 것을 강점으로 생각합니다.',
+        '팀원들과의 원활한 커뮤니케이션을 통해 목표를 달성합니다.',
+        '빠르게 변화하는 시장에 유연하게 대응하며 도전을 두려워하지 않습니다.',
+        '3년 내에 시니어 PM으로 성장하여 더 큰 임팩트를 만들고 싶습니다.',
+        'AI와 머신러닝 기술을 활용한 혁신적인 제품을 만들고자 합니다.',
+        '사용자에게 실질적인 가치를 제공하는 제품을 만드는 것이 목표입니다.',
+        '스타트업에서 대기업까지 다양한 환경에서의 경험을 보유하고 있습니다.',
+        '복잡한 문제를 단순화하고 명확한 로드맵을 제시하는 능력이 있습니다.',
+      ];
+
+      const answers: Record<string, string> = {};
+      let answerIndex = 0;
+      for (const category of questions) {
+        for (const q of category.questions || []) {
+          answers[q.id] = detailedAnswers[answerIndex % detailedAnswers.length];
+          answerIndex++;
+        }
+      }
+
+      await fetch('/api/questions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           sessionId,
-          answers: {
-            'q-1': '5년 경력의 프로덕트 매니저로서 데이터 기반 의사결정을 중시합니다.',
-            'q-2': '사용자 피드백을 제품 개선에 반영하는 것을 강점으로 생각합니다.',
-            'q-3': '팀원들과의 원활한 커뮤니케이션을 통해 목표를 달성합니다.',
-            'q-4': '빠르게 변화하는 시장에 유연하게 대응하며 도전을 두려워하지 않습니다.',
-            'q-5': '3년 내에 시니어 PM으로 성장하여 더 큰 임팩트를 만들고 싶습니다.',
-            'q-6': 'AI와 머신러닝 기술을 활용한 혁신적인 제품을 만들고자 합니다.',
-            'q-7': '사용자에게 실질적인 가치를 제공하는 제품을 만드는 것이 목표입니다.',
-          },
+          questions,
+          answers,
         }),
       });
     }, { sessionId });

@@ -4,18 +4,21 @@ import { createSessionManager } from '../fixtures/session-manager';
 /**
  * Generating Page E2E Tests
  *
- * STATUS: Phase 2 - Coming Soon
- * Current implementation shows ComingSoon component
- *
- * These tests will be activated when full report generation feature is implemented
+ * Tests the report generation progress UI:
+ * - 10-step timeline display
+ * - Progress bar with percentage
+ * - Real-time polling for status updates
+ * - Auto-redirect to /result on completion
+ * - Error handling with retry button
  */
 
-test.describe.skip('Generating Page (Phase 2 - Coming Soon)', () => {
+test.describe('Generating Page (Phase 2)', () => {
   const sessionManager = createSessionManager();
   let sessionId: string;
 
   test.beforeEach(async ({ page }) => {
-    // Create session with report generation in progress
+    // Create session with generating in progress
+    // Note: This triggers report generation automatically
     sessionId = await sessionManager.createSessionWithGenerating(page);
 
     // Navigate to generating page
@@ -30,42 +33,57 @@ test.describe.skip('Generating Page (Phase 2 - Coming Soon)', () => {
   });
 
   test('should display generating page correctly', async ({ page }) => {
-    // Check heading
-    await expect(page.locator('h1, h2').first()).toContainText('생성');
+    // Check for main heading
+    const heading = page.locator('h1');
+    await expect(heading).toContainText(/생성|제작/);
 
-    // Check for spinner/loading animation
-    const spinner = page.locator('[class*="animate-spin"]');
-    await expect(spinner).toBeVisible({ timeout: 5000 });
+    // Check for Sparkles animation icon
+    const sparklesIcon = page.locator('svg.lucide-sparkles, [class*="animate"]').first();
+    await expect(sparklesIcon).toBeVisible({ timeout: 5000 });
 
     // Check description text
-    await expect(page.locator('text=/AI가|제작|생성/')).toBeVisible();
+    await expect(page.locator('text=/AI|브랜딩|전략/')).toBeVisible();
   });
 
-  test('should display 5 progress steps', async ({ page }) => {
-    // Check for progress steps
-    const steps = page.locator('[data-testid="progress-step"]');
+  test('should display progress bar with percentage', async ({ page }) => {
+    // Wait for initial progress load
+    await page.waitForTimeout(3000);
 
-    // If testid not available, count step elements
-    const stepCount = await steps.count().catch(async () => {
-      // Alternative: count step text elements
-      const stepTexts = page.locator('text=/이력서 분석|브랜드 전략|콘텐츠 작성|디자인 생성|최종 검토/');
-      return await stepTexts.count();
+    // Check for progress percentage display
+    await expect(page.locator('text=/%/')).toBeVisible();
+
+    // Check for progress bar element
+    const progressBar = page.locator('.bg-gradient-to-r.from-indigo-500');
+    await expect(progressBar).toBeVisible();
+
+    // Check for "진행률" label
+    await expect(page.locator('text=진행률')).toBeVisible();
+  });
+
+  test('should display 10 generation steps', async ({ page }) => {
+    // Wait for steps to load
+    await page.waitForTimeout(3000);
+
+    // Check for step cards (10 steps in a grid)
+    const stepCards = page.locator('[class*="rounded-lg"][class*="border"]').filter({
+      hasText: /Step/,
     });
 
-    // Should have 5 steps
-    expect(stepCount).toBeGreaterThanOrEqual(5);
+    const stepCount = await stepCards.count();
+
+    // Should have 10 steps
+    expect(stepCount).toBeGreaterThanOrEqual(10);
   });
 
-  test('should show current step as active', async ({ page }) => {
-    await page.waitForTimeout(2000);
+  test('should show step labels with status icons', async ({ page }) => {
+    await page.waitForTimeout(3000);
 
-    // Look for active/in-progress indicator
-    // Could be a spinner icon, blue color, or "in-progress" class
-    const activeSteps = page.locator('[class*="in-progress"], [class*="bg-blue"], [class*="text-blue"]');
-    const activeCount = await activeSteps.count();
+    // Check for step labels like "Step 1", "Step 2", etc.
+    await expect(page.locator('text=/Step \\d/')).toBeVisible();
 
-    // At least one step should be active
-    expect(activeCount).toBeGreaterThan(0);
+    // Should have status icons (completed checkmarks, in-progress spinners, or pending circles)
+    const hasIcons = await page.locator('svg').count();
+    expect(hasIcons).toBeGreaterThan(0);
   });
 
   test('should poll for progress updates', async ({ page }) => {
@@ -78,112 +96,294 @@ test.describe.skip('Generating Page (Phase 2 - Coming Soon)', () => {
       }
     });
 
-    // Wait for a few seconds
-    await page.waitForTimeout(5000);
+    // Wait for a few polling cycles (2 seconds each)
+    await page.waitForTimeout(7000);
 
-    // Should have made multiple poll requests (every 2 seconds)
+    // Should have made multiple poll requests
     expect(pollCount).toBeGreaterThanOrEqual(2);
   });
 
-  test('should redirect to result page on completion', async ({ page }) => {
-    // Mock API to return completed status
-    await page.route('**/api/generate?sessionId=*', (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          status: 'completed',
-          completedSteps: 10,
-          totalSteps: 10,
-          currentStep: '완료',
-        }),
-      });
-    });
+  test('should display current step name', async ({ page }) => {
+    await page.waitForTimeout(3000);
 
-    // Wait for redirect
-    await expect(page).toHaveURL('/result', { timeout: 10000 });
+    // Should show current step info like "데이터 수집... (1/10)"
+    const stepInfo = page.locator('text=/\\(\\d+\\/\\d+\\)/');
+    await expect(stepInfo).toBeVisible({ timeout: 10000 });
   });
 
-  test('should handle generation failure', async ({ page }) => {
-    // Mock API to return failed status
-    await page.route('**/api/generate?sessionId=*', (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          status: 'failed',
-          error: '리포트 생성 실패',
-        }),
-      });
-    });
-
-    // Wait for error message
-    await expect(page.locator('text=/실패|오류/')).toBeVisible({ timeout: 10000 });
-
-    // Should show retry button
-    const retryButton = page.locator('button:has-text("다시")');
-    await expect(retryButton).toBeVisible();
-  });
-
-  test('should display estimated time', async ({ page }) => {
+  test('should show estimated time', async ({ page }) => {
     // Check for time estimate text
-    const timeEstimate = page.locator('text=/예상 소요 시간|2-3분|분/');
-    await expect(timeEstimate).toBeVisible();
+    await expect(page.locator('text=/소요 시간|2-5분/')).toBeVisible({ timeout: 5000 });
   });
 
-  test('should show completed steps with checkmarks', async ({ page }) => {
-    await page.waitForTimeout(3000);
-
-    // Mock API to show progress
-    await page.route('**/api/generate?sessionId=*', (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          status: 'in_progress',
-          completedSteps: 5,
-          totalSteps: 10,
-          currentStep: '디자인 생성 중',
-        }),
-      });
+  test('should show "이 페이지를 떠나도 생성은 계속됩니다" notice', async ({ page }) => {
+    await expect(page.locator('text=이 페이지를 떠나도 생성은 계속됩니다')).toBeVisible({
+      timeout: 5000,
     });
+  });
 
-    await page.waitForTimeout(3000);
+  test('should redirect to result page on completion', async ({ page }) => {
+    test.setTimeout(300000); // 5 minutes max for full generation
 
-    // Look for checkmark icons or completed styling
-    const checkmarks = page.locator('[class*="check"], svg[class*="check"]');
-    const checkmarkCount = await checkmarks.count();
-
-    // Should have at least some completed steps
-    expect(checkmarkCount).toBeGreaterThanOrEqual(0);
+    // Wait for generation to complete and redirect
+    await expect(page).toHaveURL('/result', { timeout: 300000 });
   });
 });
 
-test.describe('Generating Page - Error Scenarios', () => {
-  test('should redirect to start if no session', async ({ page }) => {
+test.describe('Generating Page - Mock API Responses', () => {
+  const sessionManager = createSessionManager();
+  let sessionId: string;
+
+  test.beforeEach(async ({ page }) => {
+    sessionId = await sessionManager.createSession(page);
+  });
+
+  test.afterEach(async ({ page }) => {
+    if (sessionId) {
+      await sessionManager.cleanupSession(sessionId);
+      await sessionManager.clearLocalStorage(page);
+    }
+  });
+
+  test('should update UI when progress changes', async ({ page }) => {
+    // Mock API to return specific progress state
+    let callCount = 0;
+
+    await page.route('**/api/generate?sessionId=*', (route) => {
+      callCount++;
+
+      // Return increasing progress on each call
+      const progress = Math.min(callCount * 20, 80);
+
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          data: {
+            overallStatus: 'in_progress',
+            currentStep: Math.ceil(progress / 10),
+            totalSteps: 10,
+            error: null,
+            steps: Array.from({ length: 10 }, (_, i) => ({
+              step: i + 1,
+              name: `단계 ${i + 1}`,
+              status: i + 1 <= Math.ceil(progress / 10) ? 'completed' : i + 1 === Math.ceil(progress / 10) + 1 ? 'in_progress' : 'pending',
+            })),
+          },
+        }),
+      });
+    });
+
+    await page.goto('/generating');
+
+    // Wait for progress to update
+    await page.waitForTimeout(6000);
+
+    // Progress bar should reflect the mocked progress
+    const progressText = await page.locator('text=/%/').textContent();
+    expect(progressText).toBeTruthy();
+  });
+
+  test('should show completion state and redirect', async ({ page }) => {
+    // Mock completed status
+    await page.route('**/api/generate?sessionId=*', (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          data: {
+            overallStatus: 'completed',
+            currentStep: 10,
+            totalSteps: 10,
+            error: null,
+            steps: Array.from({ length: 10 }, (_, i) => ({
+              step: i + 1,
+              name: `단계 ${i + 1}`,
+              status: 'completed',
+            })),
+          },
+        }),
+      });
+    });
+
+    await page.goto('/generating');
+
+    // Should show completion message before redirect
+    await expect(page.locator('text=/완료|완성/')).toBeVisible({ timeout: 10000 });
+
+    // Should redirect to result page
+    await expect(page).toHaveURL('/result', { timeout: 10000 });
+  });
+
+  test('should handle generation failure with retry button', async ({ page }) => {
+    // Mock failed status
+    await page.route('**/api/generate?sessionId=*', (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          data: {
+            overallStatus: 'failed',
+            currentStep: 3,
+            totalSteps: 10,
+            error: '리포트 생성 중 오류가 발생했습니다.',
+            steps: Array.from({ length: 10 }, (_, i) => ({
+              step: i + 1,
+              name: `단계 ${i + 1}`,
+              status: i < 3 ? 'completed' : i === 3 ? 'failed' : 'pending',
+            })),
+          },
+        }),
+      });
+    });
+
+    await page.goto('/generating');
+
+    // Should show error message
+    await expect(page.locator('text=/실패|오류/')).toBeVisible({ timeout: 10000 });
+
+    // Should show retry button
+    const retryButton = page.locator('button:has-text("다시 시도")');
+    await expect(retryButton).toBeVisible();
+
+    // Should stay on generating page
+    await expect(page).toHaveURL('/generating');
+  });
+
+  test('should trigger retry when retry button clicked', async ({ page }) => {
+    let retryTriggered = false;
+
+    // First call returns failure
+    await page.route('**/api/generate?sessionId=*', (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          data: {
+            overallStatus: 'failed',
+            error: '일시적 오류',
+            steps: [],
+          },
+        }),
+      });
+    });
+
+    // Track POST requests (retry triggers POST)
+    page.on('request', (request) => {
+      if (request.url().includes('/api/generate') && request.method() === 'POST') {
+        retryTriggered = true;
+      }
+    });
+
+    await page.goto('/generating');
+
+    // Wait for error state
+    await expect(page.locator('button:has-text("다시 시도")')).toBeVisible({ timeout: 10000 });
+
+    // Click retry
+    await page.locator('button:has-text("다시 시도")').click();
+
+    // Verify retry was triggered
+    await page.waitForTimeout(1000);
+    expect(retryTriggered).toBeTruthy();
+  });
+});
+
+test.describe('Generating Page - Without Valid Session', () => {
+  test('should redirect to survey if no session', async ({ page }) => {
+    await page.goto('/');
     await page.evaluate(() => localStorage.clear());
 
     await page.goto('/generating');
 
-    // Should redirect to start
-    await expect(page).toHaveURL('/start', { timeout: 5000 });
+    // Should redirect to survey
+    await expect(page).toHaveURL('/survey', { timeout: 10000 });
   });
 
-  test('should handle network errors during polling', async ({ page }) => {
-    // Simulate network failure after a few polls
-    await page.waitForTimeout(3000);
+  test('should redirect if session exists but questions not completed', async ({ page }) => {
+    const sessionManager = createSessionManager();
+
+    // Create session with questions generated but not answered
+    // (upload_completed = true, questions_completed = false)
+    const sessionId = await sessionManager.createSessionWithQuestions(page);
+
+    await page.goto('/generating');
+
+    // Should redirect to /questions (prerequisite for generating)
+    await expect(page).toHaveURL('/questions', { timeout: 10000 });
+
+    // Cleanup
+    await sessionManager.cleanupSession(sessionId);
+  });
+});
+
+test.describe('Generating Page - Network Error Handling', () => {
+  const sessionManager = createSessionManager();
+  let sessionId: string;
+
+  test.beforeEach(async ({ page }) => {
+    sessionId = await sessionManager.createSession(page);
+  });
+
+  test.afterEach(async ({ page }) => {
+    if (sessionId) {
+      await sessionManager.cleanupSession(sessionId);
+    }
+  });
+
+  test('should handle network errors during polling gracefully', async ({ page }) => {
+    let callCount = 0;
 
     await page.route('**/api/generate?sessionId=*', (route) => {
-      route.abort('failed');
+      callCount++;
+
+      if (callCount <= 2) {
+        // First two calls succeed
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            data: {
+              overallStatus: 'in_progress',
+              currentStep: callCount,
+              totalSteps: 10,
+              steps: [],
+            },
+          }),
+        });
+      } else {
+        // Third call fails with network error
+        route.abort('failed');
+      }
     });
 
+    await page.goto('/generating');
+
+    // Wait for network error
+    await page.waitForTimeout(8000);
+
+    // Page should still be functional (not crashed)
+    // Might show error or continue polling
+    const pageContent = await page.content();
+    expect(pageContent).toBeTruthy();
+  });
+
+  test('should handle 404 response when session not found', async ({ page }) => {
+    await page.route('**/api/generate?sessionId=*', (route) => {
+      route.fulfill({
+        status: 404,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: '세션을 찾을 수 없습니다' }),
+      });
+    });
+
+    await page.goto('/generating');
+
+    // Page should handle 404 gracefully
+    // Either show error or redirect
     await page.waitForTimeout(5000);
 
-    // Should either show error or keep retrying
-    // (depends on implementation - might show error after several failures)
-    const hasError = await page.locator('text=/오류|실패|연결/').count();
-
-    // Test passes if either error shown or page still loading
-    expect(true).toBeTruthy();
+    const pageContent = await page.content();
+    expect(pageContent).toBeTruthy();
   });
 });

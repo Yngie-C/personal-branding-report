@@ -1,11 +1,23 @@
 name: E2E Tests
 
+# ⚠️ DISABLED: GitHub Actions 무료 플랜 시간 절약을 위해 비활성화
+# 다시 활성화하려면 아래 주석을 해제하세요
+# on:
+#   push:
+#     branches: [main, develop]
+#   pull_request:
+#     branches: [main, develop]
+#   workflow_dispatch: # Allow manual trigger
+
+# 현재: 수동 트리거만 허용 (필요할 때만 실행)
 on:
-  push:
-    branches: [main, develop]
-  pull_request:
-    branches: [main, develop]
-  workflow_dispatch: # Allow manual trigger
+  workflow_dispatch:
+    inputs:
+      run_all_tests:
+        description: 'Run all E2E tests'
+        required: false
+        default: 'true'
+        type: boolean
 
 jobs:
   e2e-test:
