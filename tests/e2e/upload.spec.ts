@@ -5,13 +5,11 @@ import { createMockResumePDF, getMockResumeFormData } from '../fixtures/test-fil
 /**
  * Upload Page E2E Tests
  *
- * STATUS: Phase 2 - Coming Soon
- * Current implementation shows ComingSoon component
- *
- * These tests will be activated when resume upload feature is implemented
+ * STATUS: Phase 2 - Implemented
+ * Tests for resume upload and form input functionality
  */
 
-test.describe.skip('Upload Page (Phase 2 - Coming Soon)', () => {
+test.describe('Upload Page (Phase 2)', () => {
   const sessionManager = createSessionManager();
   let sessionId: string;
 
@@ -36,14 +34,14 @@ test.describe.skip('Upload Page (Phase 2 - Coming Soon)', () => {
     await expect(page.locator('h1')).toContainText('정보 입력');
 
     // Check tab options exist
-    const formTab = page.locator('button:has-text("폼 입력 (추천)")');
+    const formTab = page.locator('button:has-text("직접 입력")');
     const fileTab = page.locator('button:has-text("파일 업로드")');
 
     await expect(formTab).toBeVisible();
     await expect(fileTab).toBeVisible();
 
-    // Check "다음 단계로" button exists but is disabled initially
-    const nextButton = page.locator('button:has-text("다음 단계로")');
+    // Check "다음 단계" button exists but is disabled initially
+    const nextButton = page.locator('button:has-text("다음 단계")');
     await expect(nextButton).toBeVisible();
     await expect(nextButton).toBeDisabled();
   });
@@ -95,10 +93,10 @@ test.describe.skip('Upload Page (Phase 2 - Coming Soon)', () => {
     expect(response.status()).toBe(200);
 
     // Check success message
-    await expect(page.locator('text=이력서 정보가 저장되었습니다')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('text=정보가 저장되었습니다')).toBeVisible({ timeout: 5000 });
 
-    // Verify "다음 단계로" button is now enabled
-    const nextButton = page.locator('button:has-text("다음 단계로")');
+    // Verify "다음 단계" button is now enabled
+    const nextButton = page.locator('button:has-text("다음 단계")');
     await expect(nextButton).toBeEnabled({ timeout: 5000 });
   });
 
@@ -110,7 +108,7 @@ test.describe.skip('Upload Page (Phase 2 - Coming Soon)', () => {
     // Get mock PDF file
     const mockPDF = createMockResumePDF();
 
-    // Find file input (there might be multiple for resume and portfolio)
+    // Find file input
     const fileInput = page.locator('input[type="file"]').first();
 
     // Upload file
@@ -120,14 +118,14 @@ test.describe.skip('Upload Page (Phase 2 - Coming Soon)', () => {
       buffer: mockPDF.buffer,
     });
 
-    // Click upload button - select the blue one with specific class
-    const uploadButton = page.locator('button.bg-blue-600:has-text("이력서 업로드")');
+    // Click upload button
+    const uploadButton = page.locator('button:has-text("이력서 업로드 및 분석")');
     await uploadButton.click();
 
-    // Wait for loading state
-    await expect(page.locator('text=업로드 중')).toBeVisible();
+    // Wait for loading state (upload or parsing)
+    await expect(page.locator('text=업로드')).toBeVisible();
 
-    // Wait for API response
+    // Wait for API response (upload phase)
     const response = await page.waitForResponse(
       (resp) => resp.url().includes('/api/upload') && resp.status() === 200,
       { timeout: 15000 }
@@ -135,47 +133,19 @@ test.describe.skip('Upload Page (Phase 2 - Coming Soon)', () => {
 
     expect(response.status()).toBe(200);
 
-    // Check success message
-    await expect(page.locator('text=✓ 업로드 완료')).toBeVisible({ timeout: 5000 });
+    // Wait for parsing to complete or preview modal to appear
+    // (parsing may take 10-20 seconds)
+    await page.waitForTimeout(3000);
 
-    // Verify "다음 단계로" button is enabled
-    const nextButton = page.locator('button:has-text("다음 단계로")');
-    await expect(nextButton).toBeEnabled({ timeout: 5000 });
+    // Check that either preview modal appears or parsing completes
+    const previewModalVisible = await page.locator('text=이력서 분석 완료').isVisible().catch(() => false);
+    const completedVisible = await page.locator('text=분석이 완료되었습니다').isVisible().catch(() => false);
+
+    // Either parsing succeeded (preview modal) or completed status shown
+    expect(previewModalVisible || completedVisible).toBeTruthy();
   });
 
-  test.skip('should skip portfolio upload', async ({ page }) => {
-    // First, complete resume (form method for speed)
-    await page.waitForTimeout(2000);
-
-    // Fill minimal required fields
-    await page.getByPlaceholder('회사명 *').first().fill('Test Company');
-    await page.getByPlaceholder('직책 *').first().fill('PM');
-    await page.locator('input[type="month"]').first().fill('2020-01');
-    await page.getByPlaceholder(/성과 1/).first().fill('성과 1');
-    await page.getByPlaceholder(/기술 1/).first().fill('Skill 1');
-    await page.getByPlaceholder('프로젝트명 *').first().fill('Project 1');
-    await page.getByPlaceholder(/프로젝트 설명/).first().fill('Description');
-    await page.getByPlaceholder(/성과\/임팩트/).first().fill('Impact');
-
-    const saveButton = page.locator('button:has-text("이력서 정보 저장")');
-    await saveButton.click();
-
-    // Wait for API response and success
-    const response = await page.waitForResponse((resp) => resp.url().includes('/api/resume-form'), { timeout: 15000 });
-    expect(response.status()).toBe(200);
-
-    // Wait for button to be enabled (indicates success)
-    const nextButton = page.locator('button:has-text("다음 단계로")');
-    await expect(nextButton).toBeEnabled({ timeout: 15000 });
-
-    // Click to navigate
-    await nextButton.click();
-
-    // Should navigate to survey page
-    await expect(page).toHaveURL('/survey', { timeout: 10000 });
-  });
-
-  test.skip('should proceed to survey after resume completion', async ({ page }) => {
+  test('should proceed to questions page after form completion', async ({ page }) => {
     // Complete resume via form (default tab)
     await page.waitForTimeout(2000);
 
@@ -183,6 +153,7 @@ test.describe.skip('Upload Page (Phase 2 - Coming Soon)', () => {
     await page.getByPlaceholder('회사명 *').first().fill('Test Company');
     await page.getByPlaceholder('직책 *').first().fill('PM');
     await page.locator('input[type="month"]').first().fill('2020-01');
+    await page.click('button:has-text("재직중")');
     await page.getByPlaceholder(/성과 1/).first().fill('성과 1');
     await page.getByPlaceholder(/기술 1/).first().fill('Skill 1');
     await page.getByPlaceholder('프로젝트명 *').first().fill('Project 1');
@@ -197,34 +168,50 @@ test.describe.skip('Upload Page (Phase 2 - Coming Soon)', () => {
     expect(response.status()).toBe(200);
 
     // Wait for button to be enabled (indicates success)
-    const nextButton = page.locator('button:has-text("다음 단계로")');
+    const nextButton = page.locator('button:has-text("다음 단계")');
     await expect(nextButton).toBeEnabled({ timeout: 15000 });
 
     // Click to navigate
     await nextButton.click();
 
-    // Should navigate to survey page
-    await expect(page).toHaveURL('/survey', { timeout: 10000 });
+    // Should navigate to questions page
+    await expect(page).toHaveURL('/questions', { timeout: 10000 });
   });
 
-  test('should validate required fields in form', async ({ page }) => {
+  test('should allow skipping resume input', async ({ page }) => {
+    // Wait for page to fully load
     await page.waitForTimeout(1000);
 
-    // Try to save without filling required fields
-    const saveButton = page.locator('button:has-text("이력서 정보 저장")');
+    // Find the skip link
+    const skipLink = page.locator('button:has-text("정보 없이 진행하기")');
+    await expect(skipLink).toBeVisible();
 
-    // Button should be enabled but validation should happen on API call
-    await saveButton.click();
+    // Click skip link
+    await skipLink.click();
 
-    // Wait for API response or validation
-    await page.waitForTimeout(2000);
+    // Should navigate to questions page
+    await expect(page).toHaveURL('/questions', { timeout: 10000 });
+  });
 
-    // Should either have validation errors or not navigate away
-    const hasErrors = (await page.locator('.text-red-600').count()) > 0;
-    const stillOnUploadPage = page.url().includes('/upload');
+  test('should switch between tabs', async ({ page }) => {
+    await page.waitForTimeout(1000);
 
-    // Either validation errors shown or still on same page (form not complete)
-    expect(hasErrors || stillOnUploadPage).toBeTruthy();
+    // Initially form tab should show form fields
+    await expect(page.getByPlaceholder('브랜딩 보고서에 표시할 이름')).toBeVisible();
+
+    // Click file upload tab
+    await page.click('button:has-text("파일 업로드")');
+    await page.waitForTimeout(500);
+
+    // File upload area should be visible
+    await expect(page.locator('text=파일을 드래그하거나 클릭하세요')).toBeVisible();
+
+    // Click form tab again
+    await page.click('button:has-text("직접 입력")');
+    await page.waitForTimeout(500);
+
+    // Form fields should be visible again
+    await expect(page.getByPlaceholder('브랜딩 보고서에 표시할 이름')).toBeVisible();
   });
 
   test('should handle file upload errors', async ({ page }) => {
@@ -249,21 +236,35 @@ test.describe.skip('Upload Page (Phase 2 - Coming Soon)', () => {
       buffer: mockPDF.buffer,
     });
 
-    const uploadButton = page.locator('button.bg-blue-600:has-text("이력서 업로드")');
+    const uploadButton = page.locator('button:has-text("이력서 업로드 및 분석")');
     await uploadButton.click();
 
-    // Should show error message (displayed in error box)
-    await expect(page.locator('.text-red-600:has-text("파일")')).toBeVisible({ timeout: 5000 });
+    // Should show error message
+    await expect(page.locator('text=오류 발생')).toBeVisible({ timeout: 10000 });
   });
 
-  test('should redirect to start page if no session', async ({ page }) => {
+  test('should show back button that navigates to survey-result', async ({ page }) => {
+    await page.waitForTimeout(1000);
+
+    // Find the back button
+    const backButton = page.locator('button:has-text("이전")');
+    await expect(backButton).toBeVisible();
+
+    // Click back button
+    await backButton.click();
+
+    // Should navigate to survey-result page
+    await expect(page).toHaveURL('/survey-result', { timeout: 10000 });
+  });
+
+  test('should redirect to survey-result page if no session', async ({ page }) => {
     // Clear localStorage to simulate no session
     await page.evaluate(() => localStorage.clear());
 
     // Try to access upload page directly
     await page.goto('/upload');
 
-    // Should redirect to start page
-    await expect(page).toHaveURL('/start', { timeout: 5000 });
+    // Should redirect to survey-result page
+    await expect(page).toHaveURL('/survey-result', { timeout: 5000 });
   });
 });

@@ -4,18 +4,16 @@ import { createSessionManager } from '../fixtures/session-manager';
 /**
  * Result Page E2E Tests
  *
- * STATUS: Phase 2 - Coming Soon
- * Current implementation shows ComingSoon component
- *
- * These tests will be activated when full report results feature is implemented
+ * STATUS: Phase 2 - Implemented
+ * Tests for the final result page with download functionality
  */
 
-test.describe.skip('Result Page (Phase 2 - Coming Soon)', () => {
+test.describe('Result Page (Phase 2)', () => {
   const sessionManager = createSessionManager();
   let sessionId: string;
 
   test.beforeEach(async ({ page }) => {
-    // Create session (just basic session, we'll mock the result data)
+    // Create session
     sessionId = await sessionManager.createSession(page);
 
     // Mock the results API to return completed data
@@ -25,21 +23,18 @@ test.describe.skip('Result Page (Phase 2 - Coming Soon)', () => {
         contentType: 'application/json',
         body: JSON.stringify({
           data: {
-            report: {
-              id: 'mock-report-id',
-              pdf_url: '/mock-report.pdf',
-              brand_strategy: { essence: 'Test Brand' },
-              content: { story: 'Test Story' },
+            reportId: 'mock-report-id',
+            textPdfUrl: 'https://example.com/mock-text-report.pdf',
+            slidesPdfUrl: 'https://example.com/mock-slides.pdf',
+            pptxUrl: 'https://example.com/mock-presentation.pptx',
+            pdfUrl: 'https://example.com/mock-report.pdf',
+            socialAssets: {
+              linkedinBanner: 'https://example.com/linkedin-banner.png',
+              linkedinProfile: 'https://example.com/linkedin-profile.png',
+              businessCard: 'https://example.com/business-card.png',
+              twitterHeader: 'https://example.com/twitter-header.png',
+              instagramHighlight: 'https://example.com/instagram-highlight.png',
             },
-            webProfile: {
-              slug: 'test-profile-slug',
-              profile_data: { name: 'Test User' },
-            },
-            socialAssets: [
-              { type: 'linkedin-banner', url: '/mock-linkedin.png' },
-              { type: 'profile-image', url: '/mock-profile.png' },
-              { type: 'business-card', url: '/mock-card.png' },
-            ],
           },
         }),
       });
@@ -56,189 +51,146 @@ test.describe.skip('Result Page (Phase 2 - Coming Soon)', () => {
     }
   });
 
-  test('should display result page correctly', async ({ page }) => {
-    // Check success message
-    await expect(page.locator('text=/완료|성공/').first()).toBeVisible();
+  test('should display result page header correctly', async ({ page }) => {
+    // Check success header with checkmark
+    await expect(page.locator('text=브랜딩 리포트 완성!')).toBeVisible({ timeout: 5000 });
 
-    // Check heading
-    await expect(page.locator('h1, h2').first()).toBeVisible();
-
-    // Should show 3 main sections
-    await expect(page.locator('text=/PDF|브랜딩 리포트/')).toBeVisible();
-    await expect(page.locator('text=/웹 프로필|Web Profile/')).toBeVisible();
-    await expect(page.locator('text=/소셜 미디어|Social/')).toBeVisible();
+    // Check progress header shows step 4
+    await expect(page.locator('text=결과확인')).toBeVisible();
   });
 
-  test('should display PDF download section', async ({ page }) => {
-    // Check PDF section
-    const pdfSection = page.locator('text=/PDF|리포트/').first();
-    await expect(pdfSection).toBeVisible();
+  test('should display download section with three options', async ({ page }) => {
+    // Check download section title
+    await expect(page.locator('text=리포트 다운로드')).toBeVisible({ timeout: 5000 });
 
-    // Check for file icon or download button
-    const downloadButton = page.locator('a[href*=".pdf"], button:has-text("다운로드")').first();
-
-    // PDF might still be generating, so check for either download link or "생성 중" message
-    const hasPDF = await downloadButton.isVisible({ timeout: 2000 }).catch(() => false);
-    const isGenerating = await page.locator('text=생성 중').isVisible().catch(() => false);
-
-    expect(hasPDF || isGenerating).toBeTruthy();
+    // Check for three download options
+    await expect(page.locator('text=텍스트 리포트 (PDF)')).toBeVisible();
+    await expect(page.locator('text=슬라이드 덱 (PDF)')).toBeVisible();
+    await expect(page.locator('text=프레젠테이션 (PPTX)')).toBeVisible();
   });
 
-  test('should display web profile link', async ({ page }) => {
-    // Check for web profile URL
-    const profileLink = page.locator('a[href^="/p/"]');
+  test('should make download cards clickable when URLs are available', async ({ page }) => {
+    // Wait for content to load
+    await expect(page.locator('text=리포트 다운로드')).toBeVisible({ timeout: 5000 });
 
-    await expect(profileLink).toBeVisible({ timeout: 5000 });
+    // Check that download cards have cursor-pointer class
+    const textPdfCard = page.locator('text=텍스트 리포트 (PDF)').locator('..');
+    await expect(textPdfCard).toBeVisible();
 
-    // Get the href
-    const href = await profileLink.getAttribute('href');
-    expect(href).toMatch(/^\/p\//);
+    // Check for download icon presence (indicates active state)
+    const downloadIcons = page.locator('svg.lucide-download');
+    const iconCount = await downloadIcons.count();
+    expect(iconCount).toBeGreaterThanOrEqual(3);
   });
 
-  test('should navigate to public profile when clicking web profile link', async ({ page }) => {
-    const profileLink = page.locator('a[href^="/p/"]').first();
-    await expect(profileLink).toBeVisible();
+  test('should display social assets section (collapsed by default)', async ({ page }) => {
+    // Wait for page load
+    await expect(page.locator('text=브랜딩 리포트 완성!')).toBeVisible({ timeout: 5000 });
 
-    // Click link (opens in new tab, so we need to handle popup)
-    const [newPage] = await Promise.all([
-      page.waitForEvent('popup'),
-      profileLink.click(),
-    ]);
+    // Check social assets section exists
+    await expect(page.locator('text=소셜 미디어 에셋')).toBeVisible();
 
-    // Wait for new page to load
-    await newPage.waitForLoadState();
-
-    // Should navigate to /p/[slug]
-    expect(newPage.url()).toMatch(/\/p\/.+/);
-
-    // Close new page
-    await newPage.close();
+    // Check available count text
+    await expect(page.locator('text=/\\d+개의 에셋 사용 가능/')).toBeVisible();
   });
 
-  test('should display social assets', async ({ page }) => {
-    // Check for social assets section
-    const socialSection = page.locator('text=/소셜|Social/');
-    await expect(socialSection).toBeVisible();
+  test('should expand social assets section when clicked', async ({ page }) => {
+    // Wait for page load
+    await expect(page.locator('text=소셜 미디어 에셋')).toBeVisible({ timeout: 5000 });
 
-    // Should have multiple asset cards
-    const assetCards = page.locator('[data-testid="social-asset"]');
+    // Click to expand
+    await page.locator('text=소셜 미디어 에셋').click();
 
-    // If testid not available, count download links
-    const assetLinks = page.locator('a[href*="linkedin"], a[href*="profile"], a[href*="card"], button:has-text("다운로드")');
-    const assetCount = await assetLinks.count().catch(() => 0);
+    // Wait for expansion animation
+    await page.waitForTimeout(500);
 
-    // Should have at least 3 assets
-    expect(assetCount).toBeGreaterThanOrEqual(3);
+    // Check that asset items are visible
+    await expect(page.locator('text=LinkedIn 배너')).toBeVisible();
+    await expect(page.locator('text=LinkedIn 프로필')).toBeVisible();
+    await expect(page.locator('text=명함 디자인')).toBeVisible();
+    await expect(page.locator('text=Twitter/X 헤더')).toBeVisible();
+    await expect(page.locator('text=Instagram 하이라이트')).toBeVisible();
   });
 
-  test('should list asset types correctly', async ({ page }) => {
-    // Check for specific asset types
-    const assetTypes = [
-      'LinkedIn Banner',
-      'Profile Image',
-      'Business Card',
-      'Twitter Header',
-      'Instagram',
-    ];
+  test('should have action buttons at the bottom', async ({ page }) => {
+    // Wait for page load
+    await expect(page.locator('text=브랜딩 리포트 완성!')).toBeVisible({ timeout: 5000 });
 
-    let foundAssets = 0;
-
-    for (const assetType of assetTypes) {
-      const hasAsset = await page.locator(`text=${assetType}`).isVisible().catch(() => false);
-      if (hasAsset) foundAssets++;
-    }
-
-    // Should have at least 2 of the listed asset types
-    expect(foundAssets).toBeGreaterThanOrEqual(2);
+    // Check for action buttons
+    await expect(page.locator('button:has-text("새 리포트 만들기")')).toBeVisible();
+    await expect(page.locator('button:has-text("홈으로 돌아가기")')).toBeVisible();
   });
 
-  test('should have "새로 만들기" button', async ({ page }) => {
-    const newButton = page.locator('button:has-text("새로 만들기")');
-    await expect(newButton).toBeVisible();
+  test('should clear session and redirect on "새 리포트 만들기"', async ({ page }) => {
+    // Wait for page load
+    await expect(page.locator('text=브랜딩 리포트 완성!')).toBeVisible({ timeout: 5000 });
+
+    // Click "새 리포트 만들기" button
+    const newReportButton = page.locator('button:has-text("새 리포트 만들기")');
+    await newReportButton.click();
+
+    // Wait for navigation
+    await page.waitForURL('/', { timeout: 5000 });
+
+    // Check localStorage is cleared
+    const storedSessionId = await page.evaluate(() => localStorage.getItem('sessionId'));
+    expect(storedSessionId).toBeNull();
   });
 
-  test('should clear session and redirect on "새로 만들기"', async ({ page }) => {
-    const newButton = page.locator('button:has-text("새로 만들기")');
-    await newButton.click();
+  test('should navigate to home on "홈으로 돌아가기"', async ({ page }) => {
+    // Wait for page load
+    await expect(page.locator('text=브랜딩 리포트 완성!')).toBeVisible({ timeout: 5000 });
 
-    // Should clear localStorage
-    const sessionId = await page.evaluate(() => localStorage.getItem('sessionId'));
-    expect(sessionId).toBeNull();
+    // Click "홈으로 돌아가기" button
+    await page.locator('button:has-text("홈으로 돌아가기")').click();
 
-    // Should redirect to home or start
-    await page.waitForTimeout(1000);
-    const currentUrl = page.url();
-    expect(currentUrl).toMatch(/\/(start|$)/);
-  });
-
-  test('should have "모든 결과 인쇄" button', async ({ page }) => {
-    const printButton = page.locator('button:has-text("인쇄")');
-
-    const isVisible = await printButton.isVisible().catch(() => false);
-
-    // Print button is optional, so just log if not found
-    if (!isVisible) {
-      console.log('[Result Test] Print button not found (optional feature)');
-    }
-
-    expect(true).toBeTruthy();
-  });
-
-  test('should trigger print dialog when clicking print button', async ({ page }) => {
-    const printButton = page.locator('button:has-text("인쇄")');
-
-    if (await printButton.isVisible().catch(() => false)) {
-      // Mock window.print to verify it's called
-      await page.evaluate(() => {
-        (window as any).printCalled = false;
-        window.print = () => {
-          (window as any).printCalled = true;
-        };
-      });
-
-      await printButton.click();
-
-      const printCalled = await page.evaluate(() => (window as any).printCalled);
-      expect(printCalled).toBeTruthy();
-    } else {
-      test.skip(true, 'Print button not available');
-    }
+    // Wait for navigation
+    await page.waitForURL('/', { timeout: 5000 });
   });
 });
 
 test.describe('Result Page - Error Handling', () => {
+  const sessionManager = createSessionManager();
+
   test('should redirect to generating if report not ready (202 status)', async ({ page }) => {
+    // Create session
+    const sessionId = await sessionManager.createSession(page);
+
     // Mock API to return 202 (still generating)
     await page.route('**/api/results?sessionId=*', (route) => {
       route.fulfill({
         status: 202,
         contentType: 'application/json',
-        body: JSON.stringify({ message: 'Still generating' }),
+        body: JSON.stringify({ message: 'Report generation in progress' }),
       });
     });
 
     await page.goto('/result');
 
+    // Should show "리포트가 아직 생성 중입니다" message first
+    await expect(page.locator('text=리포트가 아직 생성 중입니다')).toBeVisible({ timeout: 5000 });
+
     // Should redirect to /generating
-    await expect(page).toHaveURL('/generating', { timeout: 5000 });
+    await page.waitForURL('/generating', { timeout: 5000 });
+
+    // Cleanup
+    await sessionManager.cleanupSession(sessionId);
+    await sessionManager.clearLocalStorage(page);
   });
 
-  test('should show error if session not found', async ({ page }) => {
+  test('should redirect to survey-result if no session', async ({ page }) => {
+    // Clear all localStorage
     await page.evaluate(() => localStorage.clear());
 
+    // Navigate to result page
     await page.goto('/result');
 
-    // Should either redirect to start or show error
-    await page.waitForTimeout(2000);
-
-    const currentUrl = page.url();
-    const hasError = await page.locator('text=/오류|에러/').count();
-
-    expect(currentUrl.includes('/start') || hasError > 0).toBeTruthy();
+    // Should redirect to survey-result
+    await page.waitForURL('/survey-result', { timeout: 5000 });
   });
 
-  test('should display error state with retry options', async ({ page }) => {
-    const sessionManager = createSessionManager();
+  test('should display error state with retry button on API error', async ({ page }) => {
+    // Create session
     const sessionId = await sessionManager.createSession(page);
 
     // Mock API error
@@ -246,20 +198,127 @@ test.describe('Result Page - Error Handling', () => {
       route.fulfill({
         status: 500,
         contentType: 'application/json',
-        body: JSON.stringify({ error: '서버 오류' }),
+        body: JSON.stringify({ error: '서버 오류가 발생했습니다' }),
       });
     });
 
     await page.goto('/result');
 
     // Should show error message
-    await expect(page.locator('text=/오류|에러|실패/')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('text=결과를 불러올 수 없습니다')).toBeVisible({ timeout: 5000 });
 
-    // Should have retry or restart buttons
-    const actionButtons = page.locator('button:has-text("다시"), button:has-text("재시도"), button:has-text("처음")');
-    const buttonCount = await actionButtons.count();
+    // Should show error details
+    await expect(page.locator('text=서버 오류가 발생했습니다')).toBeVisible();
 
-    expect(buttonCount).toBeGreaterThan(0);
+    // Should have retry button
+    await expect(page.locator('button:has-text("다시 시도")')).toBeVisible();
+
+    // Should have home button
+    await expect(page.locator('button:has-text("홈으로")')).toBeVisible();
+
+    // Cleanup
+    await sessionManager.cleanupSession(sessionId);
+    await sessionManager.clearLocalStorage(page);
+  });
+
+  test('should retry on clicking retry button', async ({ page }) => {
+    // Create session
+    const sessionId = await sessionManager.createSession(page);
+
+    let callCount = 0;
+
+    // Mock API to fail first, then succeed
+    await page.route('**/api/results?sessionId=*', (route) => {
+      callCount++;
+      if (callCount === 1) {
+        route.fulfill({
+          status: 500,
+          contentType: 'application/json',
+          body: JSON.stringify({ error: '일시적 오류' }),
+        });
+      } else {
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            data: {
+              reportId: 'mock-report-id',
+              textPdfUrl: 'https://example.com/report.pdf',
+              slidesPdfUrl: null,
+              pptxUrl: null,
+              pdfUrl: 'https://example.com/report.pdf',
+              socialAssets: {
+                linkedinBanner: '',
+                linkedinProfile: '',
+                businessCard: '',
+                twitterHeader: '',
+                instagramHighlight: '',
+              },
+            },
+          }),
+        });
+      }
+    });
+
+    await page.goto('/result');
+
+    // First should show error
+    await expect(page.locator('text=결과를 불러올 수 없습니다')).toBeVisible({ timeout: 5000 });
+
+    // Click retry
+    await page.locator('button:has-text("다시 시도")').click();
+
+    // Should show success
+    await expect(page.locator('text=브랜딩 리포트 완성!')).toBeVisible({ timeout: 5000 });
+
+    // Cleanup
+    await sessionManager.cleanupSession(sessionId);
+    await sessionManager.clearLocalStorage(page);
+  });
+
+  test('should handle partial data (some URLs missing)', async ({ page }) => {
+    // Create session
+    const sessionId = await sessionManager.createSession(page);
+
+    // Mock API with partial data
+    await page.route('**/api/results?sessionId=*', (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          data: {
+            reportId: 'mock-report-id',
+            textPdfUrl: 'https://example.com/report.pdf',
+            slidesPdfUrl: null, // Missing
+            pptxUrl: null, // Missing
+            pdfUrl: 'https://example.com/report.pdf',
+            socialAssets: {
+              linkedinBanner: '',
+              linkedinProfile: '',
+              businessCard: '',
+              twitterHeader: '',
+              instagramHighlight: '',
+            },
+          },
+        }),
+      });
+    });
+
+    await page.goto('/result');
+
+    // Should still show success page
+    await expect(page.locator('text=브랜딩 리포트 완성!')).toBeVisible({ timeout: 5000 });
+
+    // Should show download section
+    await expect(page.locator('text=리포트 다운로드')).toBeVisible();
+
+    // Text PDF should be clickable, others should show "준비 중"
+    await expect(page.locator('text=텍스트 리포트 (PDF)')).toBeVisible();
+
+    // Check for "파일을 준비 중입니다" messages (for missing URLs)
+    const preparingMessages = page.locator('text=파일을 준비 중입니다');
+    const messageCount = await preparingMessages.count();
+    expect(messageCount).toBeGreaterThanOrEqual(2); // slidesPdf and pptx
 
     // Cleanup
     await sessionManager.cleanupSession(sessionId);
