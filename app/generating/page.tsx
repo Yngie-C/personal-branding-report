@@ -19,16 +19,77 @@ import { useSessionValidation } from "@/hooks/useSessionValidation";
 // 폴링 간격 (ms)
 const POLL_INTERVAL = 2000;
 
+// Dev mode mock progress data
+const DEV_MODE_STEPS: ProgressStep[] = [
+  { step: 1, name: "이력서 분석", status: "completed" },
+  { step: 2, name: "포트폴리오 분석", status: "completed" },
+  { step: 3, name: "브랜드 전략 수립", status: "completed" },
+  { step: 4, name: "콘텐츠 작성", status: "in_progress" },
+  { step: 5, name: "키워드 추출", status: "pending" },
+  { step: 6, name: "리포트 조합", status: "pending" },
+  { step: 7, name: "PDF 생성", status: "pending" },
+  { step: 8, name: "슬라이드 덱 생성", status: "pending" },
+  { step: 9, name: "소셜 에셋 생성", status: "pending" },
+  { step: 10, name: "최종 검토", status: "pending" },
+];
+
+const DEV_MODE_PROGRESS: GenerationProgress = {
+  overallStatus: "in_progress",
+  currentStep: 4,
+  totalSteps: 10,
+  steps: DEV_MODE_STEPS,
+};
+
 export default function GeneratingPage() {
   const router = useRouter();
-  const { sessionId, isLoading: sessionLoading, isValidated } = useSessionValidation();
+  const { sessionId, isLoading: sessionLoading, isValidated, isDevMode } = useSessionValidation();
   const [progress, setProgress] = useState<GenerationProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isRetrying, setIsRetrying] = useState(false);
   const [hasStartedGeneration, setHasStartedGeneration] = useState(false);
+  const [devModeStep, setDevModeStep] = useState(4); // For animated progress in dev mode
 
   // 폴링 인터벌 참조
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Dev mode: simulate progress animation
+  useEffect(() => {
+    if (!isDevMode) return;
+
+    console.log('[Dev Mode] Simulating generation progress');
+
+    // Initialize with mock data
+    setProgress(DEV_MODE_PROGRESS);
+
+    // Simulate progress every 2 seconds
+    const interval = setInterval(() => {
+      setDevModeStep((prev) => {
+        const nextStep = prev + 1;
+        if (nextStep > 10) {
+          clearInterval(interval);
+          return 10;
+        }
+
+        // Update progress with new step
+        const updatedSteps = DEV_MODE_STEPS.map((s) => ({
+          ...s,
+          status: s.step < nextStep ? "completed" as const :
+                  s.step === nextStep ? "in_progress" as const : "pending" as const,
+        }));
+
+        setProgress({
+          overallStatus: nextStep >= 10 ? "completed" : "in_progress",
+          currentStep: nextStep,
+          totalSteps: 10,
+          steps: updatedSteps,
+        });
+
+        return nextStep;
+      });
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [isDevMode]);
 
   // 진행 상황 폴링
   const pollProgress = useCallback(async () => {
@@ -67,8 +128,9 @@ export default function GeneratingPage() {
     }
   }, [sessionId, router]);
 
-  // 자동 생성 시작 및 폴링
+  // 자동 생성 시작 및 폴링 (dev mode에서는 skip)
   useEffect(() => {
+    if (isDevMode) return; // Dev mode uses simulated progress
     if (!isValidated || !sessionId) return;
 
     const startGenerationIfNeeded = async () => {
@@ -109,7 +171,17 @@ export default function GeneratingPage() {
         pollIntervalRef.current = null;
       }
     };
-  }, [isValidated, sessionId, hasStartedGeneration, pollProgress]);
+  }, [isValidated, sessionId, hasStartedGeneration, pollProgress, isDevMode]);
+
+  // Dev mode: redirect to result when complete
+  useEffect(() => {
+    if (isDevMode && progress?.overallStatus === "completed") {
+      const timer = setTimeout(() => {
+        router.push("/result?dev=true");
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [isDevMode, progress?.overallStatus, router]);
 
   // 재시도 핸들러
   const handleRetry = async () => {
@@ -173,6 +245,15 @@ export default function GeneratingPage() {
   return (
     <main className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 px-4 py-8">
       <div className="max-w-3xl mx-auto">
+        {/* Dev Mode Banner */}
+        {isDevMode && (
+          <div className="mb-4 p-3 bg-yellow-100 border border-yellow-400 rounded-lg">
+            <p className="text-sm text-yellow-800 font-medium">
+              [Dev Mode] 시뮬레이션된 진행 상황을 표시합니다. 2초마다 단계가 진행됩니다.
+            </p>
+          </div>
+        )}
+
         {/* 상단 진행 단계 헤더 */}
         <UploadPageHeader currentStep={3} />
 

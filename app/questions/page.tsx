@@ -35,6 +35,88 @@ const PHASE_CONFIG: Record<string, Omit<QuestionPhaseMetadata, "completionPercen
   },
 };
 
+// Dev mode mock questions (9 questions: 3 philosophy + 4 expertise + 2 edge)
+const DEV_MODE_QUESTIONS: BrandingQuestions[] = [
+  {
+    category: "philosophy",
+    questions: [
+      {
+        id: "dev-phil-1",
+        question: "당신이 일을 하는 근본적인 이유는 무엇인가요?",
+        hint: "돈이나 성공 외에, 당신을 움직이게 하는 더 깊은 동기를 생각해보세요.",
+        required: true,
+        questionType: "soul",
+      },
+      {
+        id: "dev-phil-2",
+        question: "10년 후, 어떤 사람으로 기억되고 싶나요?",
+        hint: "직함이나 업적보다는 당신의 본질적인 가치와 영향력을 생각해보세요.",
+        required: true,
+        questionType: "soul",
+      },
+      {
+        id: "dev-phil-3",
+        question: "당신이 절대 타협하지 않는 가치는 무엇인가요?",
+        hint: "어떤 상황에서도 지키고 싶은 원칙을 떠올려보세요.",
+        required: true,
+        questionType: "soul",
+      },
+    ],
+  },
+  {
+    category: "expertise",
+    questions: [
+      {
+        id: "dev-exp-1",
+        question: "당신의 전문 분야에서 가장 자신 있는 영역은 무엇인가요?",
+        hint: "구체적인 기술, 방법론, 또는 문제 해결 영역을 설명해주세요.",
+        required: true,
+        questionType: "expertise",
+      },
+      {
+        id: "dev-exp-2",
+        question: "최근 가장 큰 성과를 낸 프로젝트나 경험은 무엇인가요?",
+        hint: "정량적 결과와 당신의 구체적 기여를 포함해주세요.",
+        required: true,
+        questionType: "expertise",
+      },
+      {
+        id: "dev-exp-3",
+        question: "당신만의 독특한 업무 방식이나 접근법이 있나요?",
+        hint: "다른 사람과 다르게 일하는 방식이 있다면 설명해주세요.",
+        required: false,
+        questionType: "expertise",
+      },
+      {
+        id: "dev-exp-4",
+        question: "앞으로 더 발전시키고 싶은 역량은 무엇인가요?",
+        hint: "현재 역량을 기반으로 확장하고 싶은 영역을 생각해보세요.",
+        required: false,
+        questionType: "expertise",
+      },
+    ],
+  },
+  {
+    category: "edge",
+    questions: [
+      {
+        id: "dev-edge-1",
+        question: "같은 일을 하는 다른 사람들과 당신을 구별짓는 특별한 점은 무엇인가요?",
+        hint: "경쟁자와 비교했을 때 당신만의 강점을 생각해보세요.",
+        required: true,
+        questionType: "edge",
+      },
+      {
+        id: "dev-edge-2",
+        question: "당신에게만 의뢰하고 싶은 일이 있다면 어떤 종류의 일일까요?",
+        hint: "당신의 독보적인 강점이 빛나는 상황을 상상해보세요.",
+        required: true,
+        questionType: "edge",
+      },
+    ],
+  },
+];
+
 // BrandingQuestions[]를 평탄화된 질문 배열로 변환
 interface FlatQuestion {
   id: string;
@@ -93,7 +175,7 @@ function getPhaseMetadata(
 
 export default function QuestionsPage() {
   const router = useRouter();
-  const { sessionId, isLoading: sessionLoading, isValidated } = useSessionValidation();
+  const { sessionId, isLoading: sessionLoading, isValidated, isDevMode } = useSessionValidation();
   const [questions, setQuestions] = useState<BrandingQuestions[]>([]);
   const [flatQuestions, setFlatQuestions] = useState<FlatQuestion[]>([]);
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -104,6 +186,16 @@ export default function QuestionsPage() {
 
   // debounce를 위한 ref
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Dev mode: load mock questions immediately
+  useEffect(() => {
+    if (isDevMode && questions.length === 0) {
+      console.log('[Dev Mode] Loading mock questions');
+      setQuestions(DEV_MODE_QUESTIONS);
+      setFlatQuestions(flattenQuestions(DEV_MODE_QUESTIONS));
+      setIsLoading(false);
+    }
+  }, [isDevMode, questions.length]);
 
   // 세션 검증 완료 후 데이터 복원
   useEffect(() => {
@@ -173,12 +265,13 @@ export default function QuestionsPage() {
     }
   }, [sessionId]);
 
-  // 질문이 없으면 생성
+  // 질문이 없으면 생성 (dev mode에서는 skip)
   useEffect(() => {
+    if (isDevMode) return; // Dev mode uses mock data
     if (sessionId && questions.length === 0 && !isLoading && !error) {
       generateQuestions();
     }
-  }, [sessionId, questions.length, isLoading, error, generateQuestions]);
+  }, [sessionId, questions.length, isLoading, error, generateQuestions, isDevMode]);
 
   // 답변 변경 핸들러 (debounced localStorage 저장)
   const handleAnswerChange = useCallback((value: string) => {
@@ -208,6 +301,13 @@ export default function QuestionsPage() {
   // 답변 제출
   const handleSubmit = useCallback(async () => {
     if (!sessionId) return;
+
+    // Dev mode: just redirect without API call
+    if (isDevMode) {
+      console.log('[Dev Mode] Skipping API call, redirecting to /generating');
+      router.push("/generating?dev=true");
+      return;
+    }
 
     setIsSaving(true);
     setError(null);
@@ -241,7 +341,7 @@ export default function QuestionsPage() {
     } finally {
       setIsSaving(false);
     }
-  }, [sessionId, questions, answers, router]);
+  }, [sessionId, questions, answers, router, isDevMode]);
 
   // 다음 버튼 핸들러
   const handleNext = useCallback(async () => {

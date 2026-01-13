@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 
 interface SessionStatus {
   sessionId: string;
@@ -24,12 +24,34 @@ interface UseSessionValidationResult {
   status: SessionStatus | null;
   isLoading: boolean;
   isValidated: boolean;
+  isDevMode: boolean;
   refetch: () => Promise<SessionStatus | null>;
 }
+
+// Dev mode mock session - all access granted
+const DEV_MODE_SESSION: SessionStatus = {
+  sessionId: 'dev-mock-session',
+  exists: true,
+  phase1: {
+    surveyCompleted: true,
+    briefReportGenerated: true,
+  },
+  phase2: {
+    uploadCompleted: true,
+    questionsCompleted: true,
+    generationStatus: 'completed',
+  },
+  allowedPages: ['/upload', '/questions', '/generating', '/result'],
+  redirectTo: null,
+};
 
 export function useSessionValidation(): UseSessionValidationResult {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  // Check for dev mode via URL parameter (?dev=true)
+  const isDevMode = searchParams.get('dev') === 'true';
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [status, setStatus] = useState<SessionStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -58,6 +80,16 @@ export function useSessionValidation(): UseSessionValidationResult {
   );
 
   useEffect(() => {
+    // Dev mode: skip all validation, use mock session
+    if (isDevMode) {
+      console.log('[Dev Mode] Bypassing session validation');
+      setSessionId('dev-mock-session');
+      setStatus(DEV_MODE_SESSION);
+      setIsValidated(true);
+      setIsLoading(false);
+      return;
+    }
+
     const storedSessionId = localStorage.getItem('sessionId');
 
     if (!storedSessionId) {
@@ -88,7 +120,7 @@ export function useSessionValidation(): UseSessionValidationResult {
       setIsValidated(true);
       setIsLoading(false);
     });
-  }, [router, validateSession]);
+  }, [router, validateSession, isDevMode]);
 
   const refetch = useCallback(async (): Promise<SessionStatus | null> => {
     if (!sessionId) return null;
@@ -104,6 +136,7 @@ export function useSessionValidation(): UseSessionValidationResult {
     status,
     isLoading,
     isValidated,
+    isDevMode,
     refetch,
   };
 }

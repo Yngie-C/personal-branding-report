@@ -15,7 +15,7 @@ import { useSessionValidation } from "@/hooks/useSessionValidation";
 
 export default function UploadPage() {
   const router = useRouter();
-  const { sessionId, isLoading, isValidated } = useSessionValidation();
+  const { sessionId, isLoading, isValidated, isDevMode } = useSessionValidation();
   const [activeTab, setActiveTab] = useState<string>("form");
   const [parsedFormData, setParsedFormData] = useState<ResumeFormData | null>(null);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
@@ -102,7 +102,7 @@ export default function UploadPage() {
 
   // 다음 단계로 이동
   const handleNext = () => {
-    router.push("/questions");
+    router.push(isDevMode ? "/questions?dev=true" : "/questions");
   };
 
   // 뒤로 가기
@@ -125,6 +125,15 @@ export default function UploadPage() {
   return (
     <main className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 px-4 py-8">
       <div className="max-w-2xl mx-auto">
+        {/* Dev Mode Banner */}
+        {isDevMode && (
+          <div className="mb-4 p-3 bg-yellow-100 border border-yellow-400 rounded-lg">
+            <p className="text-sm text-yellow-800 font-medium">
+              [Dev Mode] 세션 검증이 비활성화되었습니다. UI 테스트용입니다.
+            </p>
+          </div>
+        )}
+
         {/* 진행 단계 헤더 */}
         <UploadPageHeader currentStep={1} />
 
@@ -225,7 +234,7 @@ export default function UploadPage() {
             </Button>
             <Button
               onClick={handleNext}
-              disabled={!resumeCompleted}
+              disabled={!resumeCompleted && !isDevMode}
               className="flex-1 bg-blue-600 hover:bg-blue-700 flex items-center justify-center gap-2"
             >
               다음 단계

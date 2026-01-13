@@ -28,13 +28,38 @@ interface ResultData {
 
 type PageStatus = 'loading' | 'success' | 'processing' | 'error';
 
+// Dev mode mock result data
+const DEV_MODE_RESULT: ResultData = {
+  reportId: "dev-mock-report-001",
+  textPdfUrl: "#",
+  slidesPdfUrl: "#",
+  pptxUrl: "#",
+  pdfUrl: "#",
+  socialAssets: {
+    linkedinBanner: "#",
+    linkedinProfile: "#",
+    businessCard: "#",
+    twitterHeader: "#",
+    instagramHighlight: "#",
+  },
+};
+
 export default function ResultPage() {
   const router = useRouter();
-  const { sessionId, isLoading: sessionLoading, isValidated, status: sessionStatus } = useSessionValidation();
+  const { sessionId, isLoading: sessionLoading, isValidated, status: sessionStatus, isDevMode } = useSessionValidation();
   const [pageStatus, setPageStatus] = useState<PageStatus>('loading');
   const [resultData, setResultData] = useState<ResultData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isRetrying, setIsRetrying] = useState(false);
+
+  // Dev mode: load mock data immediately
+  useEffect(() => {
+    if (isDevMode) {
+      console.log('[Dev Mode] Loading mock result data');
+      setResultData(DEV_MODE_RESULT);
+      setPageStatus('success');
+    }
+  }, [isDevMode]);
 
   // 결과 데이터 가져오기
   const fetchResults = useCallback(async () => {
@@ -67,8 +92,9 @@ export default function ResultPage() {
     }
   }, [sessionId, router]);
 
-  // 세션 검증 완료 후 결과 가져오기
+  // 세션 검증 완료 후 결과 가져오기 (dev mode에서는 skip)
   useEffect(() => {
+    if (isDevMode) return; // Dev mode uses mock data
     if (isValidated && sessionId) {
       // processing 상태면 generating으로 리다이렉트 (hook이 이미 처리함)
       if (sessionStatus?.phase2.generationStatus === 'processing') {
@@ -76,7 +102,7 @@ export default function ResultPage() {
       }
       fetchResults();
     }
-  }, [isValidated, sessionId, sessionStatus, fetchResults]);
+  }, [isValidated, sessionId, sessionStatus, fetchResults, isDevMode]);
 
   // 재시도 핸들러
   const handleRetry = async () => {
@@ -100,8 +126,8 @@ export default function ResultPage() {
     router.push("/");
   };
 
-  // 로딩 상태 (세션 검증 중 또는 결과 로딩 중)
-  if (sessionLoading || !isValidated || pageStatus === 'loading' || !sessionId) {
+  // 로딩 상태 (세션 검증 중 또는 결과 로딩 중) - dev mode는 skip
+  if (!isDevMode && (sessionLoading || !isValidated || pageStatus === 'loading' || !sessionId)) {
     return (
       <main className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="text-center">
@@ -185,6 +211,15 @@ export default function ResultPage() {
   return (
     <main className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 px-4 py-8">
       <div className="max-w-3xl mx-auto">
+        {/* Dev Mode Banner */}
+        {isDevMode && (
+          <div className="mb-4 p-3 bg-yellow-100 border border-yellow-400 rounded-lg">
+            <p className="text-sm text-yellow-800 font-medium">
+              [Dev Mode] Mock 결과 데이터를 표시합니다. 다운로드 링크는 작동하지 않습니다.
+            </p>
+          </div>
+        )}
+
         {/* 진행 단계 헤더 (4/4) */}
         <UploadPageHeader currentStep={4} />
 
