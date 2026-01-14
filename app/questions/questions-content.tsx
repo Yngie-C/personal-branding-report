@@ -366,11 +366,14 @@ export default function QuestionsContent() {
   // 로딩 상태 (세션 검증 중 또는 질문 로딩 중)
   if (sessionLoading || !isValidated || isLoading) {
     return (
-      <main className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+      <main className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 relative overflow-hidden flex items-center justify-center">
+        {/* Decorative blurred shapes */}
+        <div className="absolute top-20 left-10 w-72 h-72 bg-purple-300/30 rounded-full blur-3xl" />
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-300/30 rounded-full blur-3xl" />
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="text-center"
+          className="text-center relative z-10"
         >
           <Loader2 className="w-12 h-12 text-indigo-600 animate-spin mx-auto mb-4" />
           <p className="text-gray-600">맞춤형 질문을 준비하고 있습니다...</p>
@@ -382,11 +385,14 @@ export default function QuestionsContent() {
   // 에러 상태
   if (error) {
     return (
-      <main className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+      <main className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 relative overflow-hidden flex items-center justify-center p-4">
+        {/* Decorative blurred shapes */}
+        <div className="absolute top-20 left-10 w-72 h-72 bg-purple-300/30 rounded-full blur-3xl" />
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-300/30 rounded-full blur-3xl" />
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center"
+          className="bg-white/70 backdrop-blur-xl rounded-2xl shadow-xl shadow-indigo-500/10 border border-white/40 p-8 max-w-md w-full text-center relative z-10"
         >
           <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
           <h2 className="text-xl font-bold text-gray-900 mb-2">
@@ -419,11 +425,14 @@ export default function QuestionsContent() {
   // 질문 없음
   if (flatQuestions.length === 0) {
     return (
-      <main className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+      <main className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 relative overflow-hidden flex items-center justify-center">
+        {/* Decorative blurred shapes */}
+        <div className="absolute top-20 left-10 w-72 h-72 bg-purple-300/30 rounded-full blur-3xl" />
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-300/30 rounded-full blur-3xl" />
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="text-center"
+          className="text-center relative z-10"
         >
           <Loader2 className="w-12 h-12 text-indigo-600 animate-spin mx-auto mb-4" />
           <p className="text-gray-600">질문을 생성하고 있습니다...</p>
@@ -449,9 +458,12 @@ export default function QuestionsContent() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center"
+          className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 relative overflow-hidden flex items-center justify-center"
         >
-          <div className="text-center">
+          {/* Decorative blurred shapes */}
+          <div className="absolute top-20 left-10 w-72 h-72 bg-purple-300/30 rounded-full blur-3xl" />
+          <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-300/30 rounded-full blur-3xl" />
+          <div className="text-center relative z-10">
             <Loader2 className="w-12 h-12 text-indigo-600 animate-spin mx-auto mb-4" />
             <p className="text-gray-600">답변을 저장하고 있습니다...</p>
           </div>

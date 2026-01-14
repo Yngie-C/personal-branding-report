@@ -93,8 +93,13 @@ export function FocusModeQuestion({
   const phaseColor = phaseColors[phaseMetadata.phase] || 'from-gray-600 to-gray-800';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12">
-      <div className="max-w-4xl mx-auto px-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 relative overflow-hidden py-12">
+      {/* Decorative blurred shapes */}
+      <div className="absolute top-20 left-10 w-72 h-72 bg-purple-300/30 rounded-full blur-3xl" />
+      <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-300/30 rounded-full blur-3xl" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-indigo-200/20 rounded-full blur-3xl" />
+
+      <div className="max-w-4xl mx-auto px-4 relative z-10">
         {/* Phase Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -102,7 +107,7 @@ export function FocusModeQuestion({
           transition={{ duration: 0.5 }}
           className="mb-8"
         >
-          <div className={`bg-gradient-to-r ${phaseColor} rounded-2xl p-6 text-white shadow-lg`}>
+          <div className={`bg-gradient-to-r ${phaseColor} rounded-2xl p-6 text-white shadow-xl shadow-indigo-500/20`}>
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h2 className="text-2xl font-bold mb-2">
@@ -162,7 +167,7 @@ export function FocusModeQuestion({
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.95 }}
           transition={{ duration: 0.4 }}
-          className="bg-white rounded-2xl shadow-xl p-8 mb-6"
+          className="bg-white/70 backdrop-blur-xl rounded-2xl shadow-xl shadow-indigo-500/10 border border-white/40 p-8 mb-6"
         >
           {/* Question Type Badge */}
           {question.questionType && (

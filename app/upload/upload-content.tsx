@@ -112,8 +112,11 @@ export default function UploadContent() {
 
   if (isLoading || !isValidated) {
     return (
-      <main className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="animate-pulse text-gray-500">로딩 중...</div>
+      <main className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 relative overflow-hidden flex items-center justify-center">
+        {/* Decorative blurred shapes */}
+        <div className="absolute top-20 left-10 w-72 h-72 bg-purple-300/30 rounded-full blur-3xl" />
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-300/30 rounded-full blur-3xl" />
+        <div className="animate-pulse text-gray-500 relative z-10">로딩 중...</div>
       </main>
     );
   }
@@ -123,11 +126,16 @@ export default function UploadContent() {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 px-4 py-8">
-      <div className="max-w-2xl mx-auto">
+    <main className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 relative overflow-hidden px-4 py-8">
+      {/* Decorative blurred shapes */}
+      <div className="absolute top-20 left-10 w-72 h-72 bg-purple-300/30 rounded-full blur-3xl" />
+      <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-300/30 rounded-full blur-3xl" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-indigo-200/20 rounded-full blur-3xl" />
+
+      <div className="max-w-2xl mx-auto relative z-10">
         {/* Dev Mode Banner */}
         {isDevMode && (
-          <div className="mb-4 p-3 bg-yellow-100 border border-yellow-400 rounded-lg">
+          <div className="mb-4 p-3 bg-yellow-100/80 backdrop-blur-sm border border-yellow-400 rounded-lg">
             <p className="text-sm text-yellow-800 font-medium">
               [Dev Mode] 세션 검증이 비활성화되었습니다. UI 테스트용입니다.
             </p>
@@ -142,7 +150,7 @@ export default function UploadContent() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="bg-white rounded-2xl shadow-lg p-6 sm:p-8"
+          className="bg-white/70 backdrop-blur-xl rounded-2xl shadow-xl shadow-indigo-500/10 border border-white/40 p-6 sm:p-8"
         >
           {/* 페이지 제목 */}
           <div className="text-center mb-6">
@@ -235,7 +243,7 @@ export default function UploadContent() {
             <Button
               onClick={handleNext}
               disabled={!resumeCompleted && !isDevMode}
-              className="flex-1 bg-blue-600 hover:bg-blue-700 flex items-center justify-center gap-2"
+              className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-lg shadow-indigo-500/25 flex items-center justify-center gap-2"
             >
               다음 단계
               <ArrowRight className="w-4 h-4" />

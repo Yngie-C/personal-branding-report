@@ -129,8 +129,11 @@ export default function ResultContent() {
   // 로딩 상태 (세션 검증 중 또는 결과 로딩 중) - dev mode는 skip
   if (!isDevMode && (sessionLoading || !isValidated || pageStatus === 'loading' || !sessionId)) {
     return (
-      <main className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="text-center">
+      <main className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 relative overflow-hidden flex items-center justify-center">
+        {/* Decorative blurred shapes */}
+        <div className="absolute top-20 left-10 w-72 h-72 bg-purple-300/30 rounded-full blur-3xl" />
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-300/30 rounded-full blur-3xl" />
+        <div className="text-center relative z-10">
           <Loader2 className="w-10 h-10 text-indigo-600 animate-spin mx-auto mb-4" />
           <p className="text-gray-600">결과를 불러오는 중...</p>
         </div>
@@ -141,8 +144,11 @@ export default function ResultContent() {
   // 아직 생성 중 상태
   if (pageStatus === 'processing') {
     return (
-      <main className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="text-center">
+      <main className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 relative overflow-hidden flex items-center justify-center">
+        {/* Decorative blurred shapes */}
+        <div className="absolute top-20 left-10 w-72 h-72 bg-purple-300/30 rounded-full blur-3xl" />
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-300/30 rounded-full blur-3xl" />
+        <div className="text-center relative z-10">
           <Loader2 className="w-10 h-10 text-indigo-600 animate-spin mx-auto mb-4" />
           <p className="text-gray-900 font-medium">리포트가 아직 생성 중입니다</p>
           <p className="text-gray-600 text-sm mt-1">진행 상황 페이지로 이동합니다...</p>
@@ -154,14 +160,17 @@ export default function ResultContent() {
   // 에러 상태
   if (pageStatus === 'error') {
     return (
-      <main className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 px-4 py-8">
-        <div className="max-w-2xl mx-auto">
+      <main className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 relative overflow-hidden px-4 py-8">
+        {/* Decorative blurred shapes */}
+        <div className="absolute top-20 left-10 w-72 h-72 bg-purple-300/30 rounded-full blur-3xl" />
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-300/30 rounded-full blur-3xl" />
+        <div className="max-w-2xl mx-auto relative z-10">
           <UploadPageHeader currentStep={4} />
 
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-white rounded-2xl shadow-lg p-6 sm:p-8 text-center"
+            className="bg-white/70 backdrop-blur-xl rounded-2xl shadow-xl shadow-indigo-500/10 border border-white/40 p-6 sm:p-8 text-center"
           >
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 mb-4">
               <AlertCircle className="w-8 h-8 text-red-500" />
@@ -209,11 +218,16 @@ export default function ResultContent() {
 
   // 성공 상태
   return (
-    <main className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 px-4 py-8">
-      <div className="max-w-3xl mx-auto">
+    <main className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 relative overflow-hidden px-4 py-8">
+      {/* Decorative blurred shapes */}
+      <div className="absolute top-20 left-10 w-72 h-72 bg-purple-300/30 rounded-full blur-3xl" />
+      <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-300/30 rounded-full blur-3xl" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-indigo-200/20 rounded-full blur-3xl" />
+
+      <div className="max-w-3xl mx-auto relative z-10">
         {/* Dev Mode Banner */}
         {isDevMode && (
-          <div className="mb-4 p-3 bg-yellow-100 border border-yellow-400 rounded-lg">
+          <div className="mb-4 p-3 bg-yellow-100/80 backdrop-blur-sm border border-yellow-400 rounded-lg">
             <p className="text-sm text-yellow-800 font-medium">
               [Dev Mode] Mock 결과 데이터를 표시합니다. 다운로드 링크는 작동하지 않습니다.
             </p>
