@@ -9,6 +9,8 @@ import UploadPageHeader from "@/components/upload/UploadPageHeader";
 import ResultPageHeader from "@/components/result/ResultPageHeader";
 import DownloadSection from "@/components/result/DownloadSection";
 import SocialAssetsSection from "@/components/result/SocialAssetsSection";
+import ShareOptions from "@/components/result/ShareOptions";
+import BrandStrategySummary from "@/components/result/BrandStrategySummary";
 import { useSessionValidation } from "@/hooks/useSessionValidation";
 
 interface ResultData {
@@ -23,6 +25,14 @@ interface ResultData {
     businessCard: string;
     twitterHeader: string;
     instagramHighlight: string;
+  };
+  // 추가: 공유 및 브랜드 전략 관련
+  profileUrl?: string;
+  profileSlug?: string;
+  brandStrategy?: {
+    brandEssence?: string;
+    uniqueValueProposition?: string;
+    targetAudience?: string[] | string;
   };
 }
 
@@ -41,6 +51,13 @@ const DEV_MODE_RESULT: ResultData = {
     businessCard: "#",
     twitterHeader: "#",
     instagramHighlight: "#",
+  },
+  profileUrl: "https://example.com/p/dev-user-profile",
+  profileSlug: "dev-user-profile",
+  brandStrategy: {
+    brandEssence: "혁신적 문제 해결과 데이터 기반 의사결정을 통해 팀의 성과를 극대화하는 전략적 리더",
+    uniqueValueProposition: "복잡한 비즈니스 문제를 구조화하고, 실행 가능한 솔루션으로 전환하는 능력",
+    targetAudience: ["테크 스타트업 C-Level", "디지털 트랜스포메이션 리더", "성장 단계 기업 의사결정자"],
   },
 };
 
@@ -251,6 +268,19 @@ export default function ResultContent() {
 
             {/* 소셜 에셋 섹션 (접힘 상태) */}
             <SocialAssetsSection assets={resultData.socialAssets} />
+
+            {/* 프로필 공유 섹션 */}
+            {resultData.profileUrl && (
+              <ShareOptions
+                profileUrl={resultData.profileUrl}
+                title="나의 브랜딩 프로필"
+              />
+            )}
+
+            {/* 브랜드 전략 요약 섹션 */}
+            {resultData.brandStrategy && (
+              <BrandStrategySummary brandStrategy={resultData.brandStrategy} />
+            )}
           </>
         )}
 

@@ -15,8 +15,13 @@ export interface BrandingQuestions {
     question: string;
     hint: string;
     required: boolean;
-    questionType?: 'soul' | 'expertise' | 'edge' | 'legacy';  // NEW: 질문 유형 구분
-    aiGuidance?: string;  // NEW: 답변 완료 시 AI 가이드 멘트
+    questionType?: 'soul' | 'expertise' | 'edge' | 'legacy';  // 질문 유형 구분
+    aiGuidance?: string;  // 답변 완료 시 AI 가이드 멘트
+    // Phase 2-1 확장 필드
+    exampleAnswer?: string;         // 예시 답변
+    minCharacters?: number;         // 최소 글자수 (기본: 50)
+    recommendedCharacters?: number; // 권장 글자수 (기본: 150)
+    keywords?: string[];            // 핵심 키워드 (답변 품질 분석용)
   }[];
 }
 

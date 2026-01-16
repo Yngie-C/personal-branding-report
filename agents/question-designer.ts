@@ -3,8 +3,13 @@ import { BrandingQuestions } from '@/types/brand';
 import { ParsedResume } from '@/types/resume';
 import { PortfolioAnalysis } from '@/types/portfolio';
 import { BriefAnalysis, CategoryLabels } from '@/types/survey';
-import { getSoulQuestionsByIds } from '@/lib/soul-questions/matching-logic';
-import { SoulQuestion } from '@/types/soul-questions';
+import {
+  getSoulQuestionsByIds,
+  getExpertisePoolForBrief,
+  getEdgePoolForBrief,
+  getVariantForBrief,
+} from '@/lib/soul-questions/matching-logic';
+import { SoulQuestion, QuestionTemplate } from '@/types/soul-questions';
 
 export interface QuestionDesignerInput {
   resume: ParsedResume;
@@ -70,7 +75,16 @@ Edge 예시:
 
         console.log(`[QuestionDesigner] Soul Questions:`, soulQuestions.map(q => q.id));
 
-        // 2. LLM으로 Expertise(4) + Edge(2) 생성
+        // 2. 매핑 테이블에서 Expertise/Edge 템플릿 풀 가져오기
+        const variant = getVariantForBrief(briefAnalysis);
+        const expertisePool = getExpertisePoolForBrief(briefAnalysis);
+        const edgePool = getEdgePoolForBrief(briefAnalysis);
+
+        console.log(`[QuestionDesigner] Variant: ${variant}`);
+        console.log(`[QuestionDesigner] Expertise pool:`, expertisePool.map(t => t.id));
+        console.log(`[QuestionDesigner] Edge pool:`, edgePool.map(t => t.id));
+
+        // 3. LLM으로 Expertise(4) + Edge(2) 생성
         const topCategoriesStr = briefAnalysis.topCategories
           .map((c) => CategoryLabels[c])
           .join(', ');
@@ -82,12 +96,22 @@ Edge 예시:
           )
           .join('\n');
 
+        // 템플릿 기반 프롬프트 구성
+        const expertiseTemplatesStr = expertisePool
+          .map((t, i) => `   - 질문 ${i + 1}: ${t.promptTemplate.replace('{category1}', CategoryLabels[briefAnalysis.topCategories[0]]).replace('{category2}', CategoryLabels[briefAnalysis.topCategories[1]]).replace('{category_low}', CategoryLabels[briefAnalysis.categoryScores[4]?.category] || '낮은 지표')}`)
+          .join('\n');
+
+        const edgeTemplatesStr = edgePool
+          .map((t, i) => `   - 질문 ${i + 1}: ${t.promptTemplate}`)
+          .join('\n');
+
         userMessage = `다음 정보를 종합하여 **Expertise 4문항 + Edge 2문항**을 생성해주세요:
 
 == PSA 분석 결과 ==
 페르소나: ${briefAnalysis.persona.title}
 슬로건: ${briefAnalysis.persona.tagline}
 상위 강점: ${topCategoriesStr}
+점수 패턴: ${variant} (balanced=균형형, spiked=뾰족형, mixed=혼합형)
 
 카테고리별 점수:
 ${categoryScoresStr}
@@ -106,29 +130,33 @@ ${resume.experiences
 == 포트폴리오 ==
 프로젝트: ${portfolio.projects.slice(0, 3).map((p) => `- ${p.name}: ${p.description}`).join('\n')}
 
-** 생성 요청 **
+** 생성 요청 (템플릿 기반) **
 1. **Expertise (4문항)**: PSA 강점과 구체적 경험을 연결
-   - 질문 1: PSA 1순위 강점(${CategoryLabels[briefAnalysis.topCategories[0]]})이 결정적이었던 프로젝트 순간
-   - 질문 2: PSA 2순위 강점(${CategoryLabels[briefAnalysis.topCategories[1]]})으로 예상치 못한 성과
-   - 질문 3: 수치로 표현되지 않는 "보이지 않는 기여"
-   - 질문 4: 낮은 지표를 보완하기 위한 나만의 일하는 방식
+${expertiseTemplatesStr}
 
 2. **Edge (2문항)**: 차별화와 비전
-   - 질문 5: "이것만큼은 내가 최고다"라고 자부하는 포인트
-   - 질문 6: 5년 뒤 시장에서 어떤 이름(브랜드)으로 불리고 싶은가
+${edgeTemplatesStr}
+
+** 각 질문 구성 요소 **
+- question: 질문 텍스트 (템플릿을 참고하되 이력서/포트폴리오에 맞게 구체화)
+- hint: 답변 힌트 (50자 내외)
+- exampleAnswer: 예시 답변 (80-100자, "예: "로 시작)
+- minCharacters: 50
+- recommendedCharacters: 150
+- aiGuidance: 답변 완료 시 격려 멘트
 
 JSON 출력 형식:
 [
   {
     "category": "expertise",
     "questions": [
-      {"id": "exp_1", "question": "...", "hint": "...", "required": true, "aiGuidance": "훌륭한 답변입니다..."}
+      {"id": "exp_1", "question": "...", "hint": "...", "exampleAnswer": "예: ...", "minCharacters": 50, "recommendedCharacters": 150, "required": true, "aiGuidance": "훌륭한 답변입니다..."}
     ]
   },
   {
     "category": "edge",
     "questions": [
-      {"id": "edge_1", "question": "...", "hint": "...", "required": true, "aiGuidance": "..."}
+      {"id": "edge_1", "question": "...", "hint": "...", "exampleAnswer": "예: ...", "minCharacters": 50, "recommendedCharacters": 150, "required": true, "aiGuidance": "..."}
     ]
   }
 ]`;
@@ -155,7 +183,7 @@ JSON 출력 형식:
           throw new Error('LLM이 배열 형식의 질문을 반환하지 않았습니다.');
         }
 
-        // 4. Soul Questions를 philosophy 카테고리로 추가
+        // 4. Soul Questions를 philosophy 카테고리로 추가 (Phase 2-1 필드 포함)
         const philosophyQuestions: BrandingQuestions = {
           category: 'philosophy',
           questions: soulQuestions.map(q => ({
@@ -165,6 +193,9 @@ JSON 출력 형식:
             required: true,
             questionType: 'soul',
             aiGuidance: this.generateSoulQuestionGuidance(q),
+            exampleAnswer: q.exampleAnswer,
+            minCharacters: q.minCharacters || 50,
+            recommendedCharacters: q.recommendedCharacters || 150,
           })),
         };
 

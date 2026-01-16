@@ -126,6 +126,10 @@ interface FlatQuestion {
   questionType?: "soul" | "expertise" | "edge" | "legacy";
   aiGuidance?: string;
   category: string;
+  // Phase 2-1 확장 필드
+  exampleAnswer?: string;
+  minCharacters?: number;
+  recommendedCharacters?: number;
 }
 
 function flattenQuestions(brandingQuestions: BrandingQuestions[]): FlatQuestion[] {
@@ -445,9 +449,10 @@ export default function QuestionsContent() {
   const currentAnswer = answers[currentQuestion.id] || "";
   const phaseMetadata = getPhaseMetadata(flatQuestions, currentIndex);
 
-  // 다음으로 넘어갈 수 있는 조건: 필수 질문의 경우 최소 10자 이상
+  // 다음으로 넘어갈 수 있는 조건: 필수 질문의 경우 최소 글자수 충족 (Phase 2-1: 50자)
+  const minChars = currentQuestion.minCharacters || 50;
   const canGoNext = currentQuestion.required
-    ? currentAnswer.trim().length >= 10
+    ? currentAnswer.trim().length >= minChars
     : true;
 
   return (
@@ -487,6 +492,7 @@ export default function QuestionsContent() {
             canGoNext={canGoNext}
             canGoPrevious={currentIndex > 0}
             isLastQuestion={currentIndex === flatQuestions.length - 1}
+            isDevMode={isDevMode}
           />
         </motion.div>
       )}

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, Download, Image, Linkedin, Twitter, Instagram, CreditCard } from "lucide-react";
+import CopyButton from "./CopyButton";
 
 interface SocialAssets {
   linkedinBanner: string;
@@ -68,9 +69,12 @@ function AssetCard({ title, description, icon, url, fileName }: AssetCardProps) 
         </p>
       </div>
 
-      {/* 다운로드 버튼 */}
+      {/* URL 복사 및 다운로드 버튼 */}
       {isAvailable && (
-        <Download className="w-4 h-4 text-gray-400 hover:text-indigo-600 shrink-0" />
+        <div className="flex items-center gap-1.5 shrink-0">
+          <CopyButton text={url} size="sm" variant="icon" label="URL 복사" />
+          <Download className="w-4 h-4 text-gray-400 hover:text-indigo-600" />
+        </div>
       )}
     </div>
   );

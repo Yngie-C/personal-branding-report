@@ -67,6 +67,8 @@ export async function GET() {
       );
     }
 
+    // Add caching headers - questions rarely change
+    // Cache for 1 hour on client, revalidate in background
     return NextResponse.json({
       data: {
         questions: questionArray,  // 배열로 반환
@@ -74,6 +76,10 @@ export async function GET() {
         totalQuestions: totalCount,
         categories: Object.keys(groupedByCategory),
         categoryCounts,
+      },
+    }, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400',
       },
     });
   } catch (error) {

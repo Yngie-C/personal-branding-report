@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { FileText, Presentation, Download, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import CopyButton from "./CopyButton";
 
 interface DownloadSectionProps {
   textPdfUrl: string | null;
@@ -68,9 +69,12 @@ function DownloadCard({ title, description, icon, url, fileName, delay }: Downlo
           </p>
         </div>
 
-        {/* 다운로드 아이콘 */}
+        {/* URL 복사 및 다운로드 아이콘 */}
         {isAvailable && (
-          <Download className="w-5 h-5 text-blue-600 shrink-0" />
+          <div className="flex items-center gap-2 shrink-0">
+            <CopyButton text={url} size="sm" variant="icon" label="URL 복사" />
+            <Download className="w-5 h-5 text-blue-600" />
+          </div>
         )}
       </div>
 

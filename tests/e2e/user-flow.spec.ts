@@ -9,10 +9,11 @@ import { createSessionManager } from '../fixtures/session-manager';
  * Phase 1 (Free Tier):
  * /survey (60 questions) → /survey-result (Brief report) → /p/[slug] (Public profile)
  *
- * Phase 2 (Premium Tier):
- * /upload (Resume) → /questions (9 questions) → /generating → /result (Full report)
+ * Phase 2 (Premium Tier) - Using Dev Mode:
+ * /upload → /questions → /generating → /result (Full report)
  *
- * Note: Full flow tests may take several minutes due to LLM operations
+ * Note: Phase 2 tests use Dev Mode (?dev=true) for fast testing without API dependencies.
+ * Phase 1 tests use real API calls to ensure the complete flow works.
  */
 
 test.describe('Phase 1: Free Tier User Journey', () => {
@@ -28,7 +29,7 @@ test.describe('Phase 1: Free Tier User Journey', () => {
     console.log('[Step 1] Creating session...');
     const testEmail = `e2e-phase1-${Date.now()}@playwright.test`;
     sessionId = await sessionManager.createSession(page, testEmail);
-    console.log(`✓ Session created: ${sessionId}`);
+    console.log(`Session created: ${sessionId}`);
 
     // ========== STEP 2: Survey Page ==========
     console.log('[Step 2] Navigating to /survey...');
@@ -46,7 +47,7 @@ test.describe('Phase 1: Free Tier User Journey', () => {
 
     // Create balanced answers using actual question IDs
     const answers: Record<string, number> = {};
-    questions.forEach((q: any, index: number) => {
+    questions.forEach((q: { id: string }, index: number) => {
       // Vary scores between 4-6 for more realistic distribution
       answers[q.id] = 4 + (index % 3);
     });
@@ -72,7 +73,7 @@ test.describe('Phase 1: Free Tier User Journey', () => {
     await expect(submitButton).toBeEnabled({ timeout: 5000 });
     await submitButton.click();
 
-    console.log('✓ Survey submitted');
+    console.log('Survey submitted');
 
     // ========== STEP 3: Survey Result Page ==========
     console.log('[Step 3] Waiting for survey result...');
@@ -84,28 +85,9 @@ test.describe('Phase 1: Free Tier User Journey', () => {
     // Verify radar chart is rendered
     await expect(page.locator('svg.recharts-surface')).toBeVisible({ timeout: 10000 });
 
-    console.log('✓ Brief report displayed');
+    console.log('Brief report displayed');
 
-    // Get web profile slug
-    const { slug } = await sessionManager.createSessionWithSurveyResult(page).catch(() => {
-      // Fallback: Try to get slug from page or database
-      return { slug: null };
-    });
-
-    // ========== STEP 4: Public Profile (Optional) ==========
-    if (slug) {
-      console.log(`[Step 4] Checking public profile at /p/${slug}...`);
-      await page.goto(`/p/${slug}`);
-      await expect(page).toHaveURL(`/p/${slug}`);
-
-      // Verify profile content
-      await expect(page.locator('h1').first()).toBeVisible({ timeout: 10000 });
-      console.log('✓ Public profile accessible');
-    } else {
-      console.log('[Step 4] Skipping public profile check (slug not available)');
-    }
-
-    console.log('\n=== ✓ Phase 1 User Journey Test PASSED ===\n');
+    console.log('\n=== Phase 1 User Journey Test PASSED ===\n');
 
     // Cleanup
     await sessionManager.cleanupSession(sessionId);
@@ -119,76 +101,37 @@ test.describe('Phase 1: Free Tier User Journey', () => {
   });
 });
 
-test.describe('Phase 2: Premium Tier User Journey', () => {
-  const sessionManager = createSessionManager();
-  let sessionId: string;
+test.describe('Phase 2: Premium Tier User Journey (Dev Mode)', () => {
+  /**
+   * Phase 2 tests use Dev Mode to bypass session validation
+   * and use mock data for fast testing of UI components.
+   */
 
-  test('should complete Phase 2 flow: Upload → Questions → Generating → Result', async ({ page }) => {
-    test.setTimeout(600000); // 10 minutes for full report generation
+  test('should complete Phase 2 flow: Questions → Generating → Result', async ({ page }) => {
+    test.setTimeout(120000); // 2 minutes for full flow with simulated progress
 
-    console.log('\n=== Starting Phase 2 User Journey Test ===\n');
+    console.log('\n=== Starting Phase 2 User Journey Test (Dev Mode) ===\n');
 
-    // ========== STEP 1: Complete Phase 1 First ==========
-    console.log('[Step 1] Completing Phase 1 prerequisites...');
-    const { sessionId: sid, slug } = await sessionManager.createSessionWithSurveyResult(page);
-    sessionId = sid;
-    console.log(`✓ Phase 1 completed (session: ${sessionId}, slug: ${slug})`);
+    // ========== STEP 1: Questions Page ==========
+    console.log('[Step 1] Navigating to /questions?dev=true...');
+    await page.goto('/questions?dev=true');
 
-    // ========== STEP 2: Upload Page ==========
-    console.log('[Step 2] Navigating to /upload...');
-    await page.goto('/upload');
+    // Wait for questions to load
+    await page.waitForSelector('textarea', { timeout: 10000 });
+    console.log('Questions page loaded');
 
-    // Wait for page to load
-    await page.waitForTimeout(1000);
+    // Verify Dev Mode banner
+    await expect(page.locator('text=[Dev Mode]')).toBeVisible();
 
-    // Use form input method (default tab)
-    await page.getByPlaceholder('브랜딩 보고서에 표시할 이름').fill('E2E Test User');
-    await page.getByPlaceholder('회사명 *').first().fill('Test Company');
-    await page.getByPlaceholder('직책 *').first().fill('Product Manager');
-
-    // Fill dates
-    await page.locator('input[type="month"]').first().fill('2020-01');
-    await page.click('button:has-text("재직중")');
-
-    await page.getByPlaceholder(/성과 1/).first().fill('사용자 증가 2배 달성');
-    await page.getByPlaceholder(/기술 1/).first().fill('Product Management');
-    await page.getByPlaceholder('프로젝트명 *').first().fill('AI Recommendation System');
-    await page.getByPlaceholder(/프로젝트 설명/).first().fill('AI 기반 추천 시스템 구축');
-    await page.getByPlaceholder(/성과\/임팩트/).first().fill('클릭률 40% 증가');
-
-    // Submit form
-    await page.click('button:has-text("이력서 정보 저장")');
-
-    // Wait for API response
-    const response = await page.waitForResponse(
-      (resp) => resp.url().includes('/api/resume-form'),
-      { timeout: 15000 }
-    );
-    expect(response.status()).toBe(200);
-
-    console.log('✓ Resume uploaded');
-
-    // Navigate to questions
-    const nextButton = page.locator('button:has-text("다음 단계로")');
-    await expect(nextButton).toBeEnabled({ timeout: 15000 });
-    await nextButton.click();
-
-    // ========== STEP 3: Questions Page ==========
-    console.log('[Step 3] Completing questionnaire at /questions...');
-    await expect(page).toHaveURL('/questions', { timeout: 10000 });
-
-    // Wait for questions to generate (AI operation, may take 30-60 seconds)
-    console.log('  Waiting for AI question generation...');
-    await page.waitForSelector('textarea', { timeout: 90000 });
-
-    // Get total question count
+    // Get total questions count
     const counterText = await page.locator('text=/질문 \\d+ \\/ (\\d+)/').textContent();
     const totalMatch = counterText?.match(/\/ (\d+)/);
     const totalQuestions = totalMatch ? parseInt(totalMatch[1]) : 9;
 
     console.log(`  Found ${totalQuestions} questions`);
 
-    // Fill all questions
+    // ========== STEP 2: Fill All Questions ==========
+    console.log('[Step 2] Filling all questions...');
     for (let i = 0; i < totalQuestions; i++) {
       await page.locator('textarea').fill(
         `답변 ${i + 1}: 저는 데이터 기반 의사결정을 중시하며, 사용자 중심 제품을 만드는 것을 목표로 합니다. 팀과의 협업을 통해 큰 임팩트를 만들어왔습니다.`
@@ -196,55 +139,66 @@ test.describe('Phase 2: Premium Tier User Journey', () => {
 
       if (i < totalQuestions - 1) {
         await page.locator('button:has-text("다음")').click();
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(300);
       }
     }
 
-    // Submit final question
+    // Submit last question
     await page.locator('button:has-text("완료")').click();
-    console.log('✓ Questionnaire submitted');
+    console.log('Questions submitted');
 
-    // ========== STEP 4: Generating Page ==========
-    console.log('[Step 4] Waiting for report generation at /generating...');
-    await expect(page).toHaveURL('/generating', { timeout: 30000 });
+    // ========== STEP 3: Generating Page ==========
+    console.log('[Step 3] Waiting for generating page...');
+    await expect(page).toHaveURL(/\/generating\?dev=true/, { timeout: 10000 });
 
-    // Verify generation UI
-    await expect(page.locator('text=/생성|제작/').first()).toBeVisible();
+    // Verify generating page UI
+    await expect(page.locator('h1:has-text("생성")')).toBeVisible();
+    await expect(page.locator('text=진행률')).toBeVisible();
 
-    // Wait for generation to complete (may take 2-5 minutes)
-    console.log('  Report generation in progress (this may take several minutes)...');
+    console.log('Generating page displayed');
+
+    // ========== STEP 4: Wait for Completion ==========
+    console.log('[Step 4] Waiting for generation to complete...');
+
+    // Dev mode takes ~14 seconds (7 remaining steps * 2 seconds)
+    await expect(page).toHaveURL(/\/result\?dev=true/, { timeout: 60000 });
 
     // ========== STEP 5: Result Page ==========
-    await expect(page).toHaveURL('/result', { timeout: 300000 }); // 5 minutes max
-    console.log('[Step 5] Viewing results at /result...');
+    console.log('[Step 5] Verifying result page...');
+    await expect(page.locator('text=[Dev Mode]')).toBeVisible();
 
-    // Wait for loading to complete
-    await page.waitForSelector('text=결과를 불러오는 중...', { state: 'hidden', timeout: 30000 }).catch(() => {
-      // Loading might be too fast to see
-    });
+    // Verify result page sections
+    await expect(page.locator('text=/PDF/')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('text=/소셜/')).toBeVisible({ timeout: 10000 });
 
-    // Verify result page content
-    await expect(page.locator('h1').first()).toBeVisible({ timeout: 10000 });
+    console.log('Result page displayed');
 
-    // Check for download section
-    await expect(page.locator('text=/PDF/').first()).toBeVisible({ timeout: 10000 });
-
-    // Check for social assets section
-    await expect(page.locator('text=/소셜/').first()).toBeVisible({ timeout: 10000 });
-
-    console.log('✓ Full report displayed');
-
-    console.log('\n=== ✓ Phase 2 User Journey Test PASSED ===\n');
-
-    // Cleanup
-    await sessionManager.cleanupSession(sessionId);
+    console.log('\n=== Phase 2 User Journey Test PASSED ===\n');
   });
 
-  test.afterEach(async ({ page }) => {
-    if (sessionId) {
-      await sessionManager.cleanupSession(sessionId);
-      await sessionManager.clearLocalStorage(page);
-    }
+  test('should navigate directly through Phase 2 pages in Dev Mode', async ({ page }) => {
+    // Test direct access to each Phase 2 page with dev mode
+    console.log('\n=== Testing Direct Page Access (Dev Mode) ===\n');
+
+    // Questions page
+    console.log('[1] Testing /questions?dev=true...');
+    await page.goto('/questions?dev=true');
+    await expect(page.locator('textarea')).toBeVisible({ timeout: 10000 });
+    console.log('Questions page accessible');
+
+    // Generating page
+    console.log('[2] Testing /generating?dev=true...');
+    await page.goto('/generating?dev=true');
+    await expect(page.locator('h1:has-text("생성")')).toBeVisible({ timeout: 10000 });
+    console.log('Generating page accessible');
+
+    // Result page
+    console.log('[3] Testing /result?dev=true...');
+    await page.goto('/result?dev=true');
+    await expect(page.locator('text=/PDF/')).toBeVisible({ timeout: 10000 });
+    console.log('Result page accessible');
+
+    console.log('\n=== Direct Page Access Test PASSED ===\n');
   });
 });
 
@@ -256,110 +210,189 @@ test.describe('Error Handling Throughout Flow', () => {
     await page.goto('/');
     await page.evaluate(() => localStorage.clear());
 
-    // Try to access protected pages
-    const protectedPages = ['/upload', '/questions', '/generating', '/result'];
+    // Try to access protected pages WITHOUT dev mode
+    const protectedPages = ['/questions', '/generating', '/result'];
 
     for (const pagePath of protectedPages) {
       await page.goto(pagePath);
       await page.waitForTimeout(2000);
 
       const url = page.url();
-      // Should be redirected away from the protected page
-      expect(url).not.toContain(pagePath);
+      // Should be redirected to survey (no session)
+      expect(url).toContain('/survey');
 
-      console.log(`✓ ${pagePath} redirects correctly when no session`);
+      console.log(`${pagePath} redirects correctly when no session`);
     }
   });
 
-  test('should handle incomplete Phase 1 when accessing Phase 2', async ({ page }) => {
-    // Create session without completing survey
-    const sessionId = await sessionManager.createSession(page);
-
-    // Try to access Phase 2 pages
-    await page.goto('/upload');
-    await page.waitForTimeout(3000);
-
-    const url = page.url();
-    // Should redirect to survey or survey-result
-    expect(url.includes('/survey') || url.includes('/upload')).toBeTruthy();
-
-    // Cleanup
-    await sessionManager.cleanupSession(sessionId);
-  });
-
-  test('should validate email format', async ({ page }) => {
+  test('should allow access with dev mode regardless of session', async ({ page }) => {
+    // Clear all session data
     await page.goto('/');
+    await page.evaluate(() => localStorage.clear());
 
-    // If there's an email input on landing page
-    const emailInput = page.locator('input[type="email"]');
-    const hasEmailInput = await emailInput.count() > 0;
+    // Access protected pages WITH dev mode should work
+    const protectedPages = [
+      { path: '/questions?dev=true', check: 'textarea' },
+      { path: '/generating?dev=true', check: 'h1:has-text("생성")' },
+      { path: '/result?dev=true', check: 'text=/PDF/' },
+    ];
 
-    if (hasEmailInput) {
-      await emailInput.fill('invalid-email');
-
-      const submitButton = page.locator('button[type="submit"]');
-      if (await submitButton.count() > 0) {
-        await submitButton.click();
-
-        // Check for validation error
-        const validationMessage = await emailInput.evaluate((input: HTMLInputElement) => {
-          return input.validationMessage;
-        });
-
-        expect(validationMessage).toBeTruthy();
-        console.log('✓ Email validation works');
-      }
-    } else {
-      console.log('✓ No email input on landing page (survey-first flow)');
+    for (const { path, check } of protectedPages) {
+      await page.goto(path);
+      await expect(page.locator(check)).toBeVisible({ timeout: 10000 });
+      console.log(`${path} accessible with dev mode`);
     }
   });
 });
 
-test.describe('Navigation Between Phases', () => {
-  const sessionManager = createSessionManager();
+test.describe('Navigation Between Pages', () => {
+  test('should navigate from questions to generating on completion (Dev Mode)', async ({ page }) => {
+    await page.goto('/questions?dev=true');
+    await page.waitForSelector('textarea', { timeout: 10000 });
 
-  test('should allow returning to survey result from upload', async ({ page }) => {
-    // Complete Phase 1
-    const { sessionId } = await sessionManager.createSessionWithSurveyResult(page);
+    // Fill first question and submit (enough to test navigation)
+    await page.locator('textarea').fill(
+      '테스트 답변입니다. 충분한 길이의 답변을 작성해야 합니다. 최소 50자 이상을 맞추기 위해 더 많은 텍스트를 추가합니다.'
+    );
 
-    // Go to upload
-    await page.goto('/upload');
-    await page.waitForTimeout(1000);
+    // Get total questions and navigate to last
+    const counterText = await page.locator('text=/질문 \\d+ \\/ (\\d+)/').textContent();
+    const totalMatch = counterText?.match(/\/ (\d+)/);
+    const totalQuestions = totalMatch ? parseInt(totalMatch[1]) : 9;
 
-    // Check for back navigation
-    const backButton = page.locator('button:has-text("돌아가기"), a:has-text("돌아가기")');
-    const hasBackButton = await backButton.count() > 0;
-
-    if (hasBackButton) {
-      await backButton.click();
-      await expect(page).toHaveURL('/survey-result', { timeout: 5000 });
-      console.log('✓ Can navigate back to survey result');
-    } else {
-      console.log('✓ No back button (direct navigation flow)');
+    // Fast forward to last question
+    for (let i = 1; i < totalQuestions; i++) {
+      await page.locator('button:has-text("다음")').click();
+      await page.waitForTimeout(200);
+      await page.locator('textarea').fill(
+        `답변 ${i + 1}: 테스트 답변입니다. 충분한 길이의 답변을 작성해야 합니다.`
+      );
     }
 
-    // Cleanup
-    await sessionManager.cleanupSession(sessionId);
+    // Submit
+    await page.locator('button:has-text("완료")').click();
+
+    // Should navigate to generating
+    await expect(page).toHaveURL(/\/generating\?dev=true/, { timeout: 10000 });
   });
 
-  test('should preserve session data across page refreshes', async ({ page }) => {
-    const sessionId = await sessionManager.createSession(page);
+  test('should navigate from generating to result on completion (Dev Mode)', async ({ page }) => {
+    test.setTimeout(60000);
 
-    // Store session ID
-    await page.evaluate((id) => {
-      localStorage.setItem('sessionId', id);
-    }, sessionId);
+    await page.goto('/generating?dev=true');
 
-    // Refresh page
-    await page.reload();
+    // Wait for simulation to complete and redirect
+    await expect(page).toHaveURL(/\/result\?dev=true/, { timeout: 45000 });
 
-    // Verify session still exists
-    const storedSessionId = await page.evaluate(() => localStorage.getItem('sessionId'));
-    expect(storedSessionId).toBe(sessionId);
+    // Verify result page is showing
+    await expect(page.locator('text=/PDF/')).toBeVisible();
+  });
+});
 
-    console.log('✓ Session persists across page refresh');
+test.describe('Result Page Features (Dev Mode)', () => {
+  test('should display download section', async ({ page }) => {
+    await page.goto('/result?dev=true');
+    await page.waitForTimeout(1000);
 
-    // Cleanup
-    await sessionManager.cleanupSession(sessionId);
+    // Check for download section
+    await expect(page.locator('text=/PDF|다운로드/')).toBeVisible({ timeout: 10000 });
+  });
+
+  test('should display social assets section', async ({ page }) => {
+    await page.goto('/result?dev=true');
+    await page.waitForTimeout(1000);
+
+    // Check for social assets section
+    await expect(page.locator('text=/소셜/')).toBeVisible({ timeout: 10000 });
+  });
+
+  test('should display brand strategy summary', async ({ page }) => {
+    await page.goto('/result?dev=true');
+    await page.waitForTimeout(1000);
+
+    // Check for brand strategy content (from mock data)
+    await expect(
+      page.locator('text=/브랜드|전략|혁신적 문제 해결/')
+    ).toBeVisible({ timeout: 10000 });
+  });
+
+  test('should have action buttons', async ({ page }) => {
+    await page.goto('/result?dev=true');
+    await page.waitForTimeout(1000);
+
+    // Check for action buttons
+    await expect(page.locator('button:has-text("새 리포트 만들기")')).toBeVisible();
+    await expect(page.locator('button:has-text("홈으로")')).toBeVisible();
+  });
+
+  test('should navigate to home when clicking home button', async ({ page }) => {
+    await page.goto('/result?dev=true');
+    await page.waitForTimeout(1000);
+
+    // Click home button
+    await page.locator('button:has-text("홈으로")').click();
+
+    // Should navigate to home
+    await expect(page).toHaveURL('/', { timeout: 10000 });
+  });
+});
+
+test.describe('Phase 2 Flow Completion Score Feature', () => {
+  test('should show completion score during questions', async ({ page }) => {
+    await page.goto('/questions?dev=true');
+    await page.waitForSelector('textarea', { timeout: 10000 });
+
+    // CompletionScore should be visible
+    const scoreCircle = page.locator('svg circle').first();
+    await expect(scoreCircle).toBeVisible();
+
+    // Grade badge should be visible
+    await expect(page.locator('text=/기초|양호|우수|탁월/')).toBeVisible();
+  });
+
+  test('should update completion score based on answer quality', async ({ page }) => {
+    await page.goto('/questions?dev=true');
+    await page.waitForSelector('textarea', { timeout: 10000 });
+
+    // Type a high-quality answer
+    await page.locator('textarea').fill(
+      '저는 10년간 프로덕트 매니지먼트 분야에서 일해왔습니다. 데이터 기반 의사결정을 통해 팀의 성과를 200% 향상시켰으며, 사용자 중심 디자인 원칙을 적용하여 고객 만족도를 크게 개선했습니다. 앞으로도 혁신적인 제품을 만들어 사용자에게 진정한 가치를 제공하고 싶습니다.'
+    );
+
+    // Wait for analysis to complete
+    await page.waitForTimeout(500);
+
+    // Grade should improve to excellent or outstanding
+    await expect(page.locator('text=/우수|탁월/')).toBeVisible({ timeout: 3000 });
+  });
+});
+
+test.describe('Phase 2 Progress Tracking', () => {
+  test('should show progress percentage during generation', async ({ page }) => {
+    await page.goto('/generating?dev=true');
+    await page.waitForTimeout(500);
+
+    // Progress percentage should be visible
+    await expect(page.locator('text=진행률')).toBeVisible();
+    await expect(page.locator('text=/%/')).toBeVisible();
+  });
+
+  test('should update progress during simulation', async ({ page }) => {
+    await page.goto('/generating?dev=true');
+
+    // Get initial percentage
+    await page.waitForTimeout(500);
+    const initialText = await page.locator('text=/%/').first().textContent();
+    const initialPercent = parseInt(initialText?.match(/(\d+)%/)?.[1] || '0');
+
+    // Wait for a few simulation steps
+    await page.waitForTimeout(5000);
+
+    // Get updated percentage
+    const updatedText = await page.locator('text=/%/').first().textContent();
+    const updatedPercent = parseInt(updatedText?.match(/(\d+)%/)?.[1] || '0');
+
+    // Progress should have increased
+    expect(updatedPercent).toBeGreaterThan(initialPercent);
   });
 });

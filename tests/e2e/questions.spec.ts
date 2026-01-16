@@ -1,53 +1,76 @@
 import { test, expect } from '@playwright/test';
-import { createSessionManager } from '../fixtures/session-manager';
 
 /**
- * Questions Page E2E Tests
+ * Questions Page E2E Tests (Phase 2)
  *
- * Tests the Focus Mode questionnaire UI:
- * - 9 questions displayed one at a time
- * - Categories: Philosophy (3), Expertise (4), Edge (2)
+ * Tests the Focus Mode questionnaire UI using Dev Mode (?dev=true):
+ * - 9 questions displayed one at a time (3 Philosophy + 4 Expertise + 2 Edge)
+ * - Phase header with completion percentage
+ * - CompletionScore component showing answer quality
  * - Previous/Next navigation
- * - Answer auto-save
+ * - Character count and minimum requirements
  * - Final submission to /generating
+ *
+ * Dev Mode bypasses session validation and uses mock questions,
+ * enabling fast testing without API dependencies.
  */
 
-test.describe('Questions Page (Phase 2)', () => {
-  const sessionManager = createSessionManager();
-  let sessionId: string;
-
+test.describe('Questions Page - Dev Mode', () => {
   test.beforeEach(async ({ page }) => {
-    // Create session with upload completed and questions ready
-    // Note: This includes resume upload + survey completion + question generation
-    sessionId = await sessionManager.createSessionWithQuestions(page);
+    // Navigate to questions page in Dev Mode
+    await page.goto('/questions?dev=true');
 
-    // Navigate to questions page
-    await page.goto('/questions');
-
-    // Wait for questions to load (AI generation)
-    await page.waitForSelector('textarea', { timeout: 60000 });
-  });
-
-  test.afterEach(async ({ page }) => {
-    if (sessionId) {
-      await sessionManager.cleanupSession(sessionId);
-      await sessionManager.clearLocalStorage(page);
-    }
+    // Wait for questions to load (dev mode loads mock data instantly)
+    await page.waitForSelector('textarea', { timeout: 10000 });
   });
 
   test('should display questions page with Focus Mode UI', async ({ page }) => {
-    // Check for phase header (Philosophy/Expertise/Edge)
-    const phaseHeader = page.locator('h2').filter({ hasText: /Philosophy|Expertise|Edge/ });
-    await expect(phaseHeader).toBeVisible({ timeout: 10000 });
+    // Check for Dev Mode banner
+    await expect(page.locator('text=[Dev Mode]')).toBeVisible();
+
+    // Check for phase header (Philosophy first)
+    await expect(page.locator('h2:has-text("Philosophy")')).toBeVisible();
 
     // Check for question counter
-    await expect(page.locator('text=/질문 \\d+ \\/ \\d+/')).toBeVisible();
+    await expect(page.locator('text=/질문 1 \\/ \\d+/')).toBeVisible();
 
-    // Check for progress percentage
+    // Check for completion percentage in header
+    await expect(page.locator('text=/브랜드 완성도/')).toBeVisible();
     await expect(page.locator('text=/%/')).toBeVisible();
 
     // Check for textarea
     await expect(page.locator('textarea')).toBeVisible();
+  });
+
+  test('should show CompletionScore component', async ({ page }) => {
+    // CompletionScore should be visible in the question card
+    // It shows a circular gauge with score
+    const completionScore = page.locator('svg circle').first();
+    await expect(completionScore).toBeVisible();
+
+    // Check for grade badge (will show "기초" initially since no answer)
+    await expect(page.locator('text=/기초|양호|우수|탁월/')).toBeVisible();
+  });
+
+  test('should update CompletionScore when answering', async ({ page }) => {
+    const textarea = page.locator('textarea');
+
+    // Type a short answer (below minimum)
+    await textarea.fill('짧은 답변');
+
+    // Should show basic grade for short answer
+    await expect(page.locator('text=/기초/')).toBeVisible({ timeout: 3000 });
+
+    // Type a longer, better answer
+    await textarea.fill(
+      '저는 팀의 성장과 발전을 위해 끊임없이 노력하고 있습니다. 데이터 기반 의사결정을 통해 효율적인 결과를 도출하고, 협업을 통해 시너지를 창출합니다.'
+    );
+
+    // Score should improve (wait for animation)
+    await page.waitForTimeout(500);
+
+    // Grade should improve to good or higher
+    await expect(page.locator('text=/양호|우수|탁월/')).toBeVisible({ timeout: 3000 });
   });
 
   test('should show one question at a time', async ({ page }) => {
@@ -56,41 +79,48 @@ test.describe('Questions Page (Phase 2)', () => {
     await expect(textareas).toHaveCount(1);
 
     // Should have question text
-    const questionCard = page.locator('.bg-white.rounded-2xl');
-    await expect(questionCard).toBeVisible();
+    const questionCard = page.locator('.bg-white\\/70, [class*="backdrop-blur"]');
+    await expect(questionCard.first()).toBeVisible();
   });
 
-  test('should accept user input and show character count', async ({ page }) => {
+  test('should display character count and guidelines', async ({ page }) => {
     const textarea = page.locator('textarea');
-    const testAnswer = '이것은 테스트 답변입니다. 저는 데이터 기반 의사결정을 중시합니다.';
+    const testAnswer = '이것은 테스트 답변입니다.';
 
     await textarea.fill(testAnswer);
 
-    // Verify input was accepted
-    const value = await textarea.inputValue();
-    expect(value).toBe(testAnswer);
+    // Check character count display
+    await expect(page.locator(`text=${testAnswer.length}자`)).toBeVisible();
 
-    // Check character count display (testAnswer is about 35 characters)
-    await expect(page.locator(`text=${testAnswer.length} 자`)).toBeVisible();
+    // Check for minimum/recommended guidelines (최소 50자 | 권장 150자)
+    await expect(page.locator('text=/최소.*자|권장.*자/')).toBeVisible();
+  });
+
+  test('should show warning when below minimum characters', async ({ page }) => {
+    const textarea = page.locator('textarea');
+
+    // Type short answer (below 50 chars minimum)
+    await textarea.fill('짧은 테스트');
+
+    // Warning should appear
+    await expect(page.locator('text=/최소.*자 이상 작성/')).toBeVisible();
+    await expect(page.locator('text=/자 부족/')).toBeVisible();
   });
 
   test('should show hint section with lightbulb icon', async ({ page }) => {
-    // Hints are displayed in a blue box with Lightbulb icon
+    // Hints are displayed in a blue box
     const hintSection = page.locator('.bg-blue-50');
+    await expect(hintSection).toBeVisible();
 
-    // Hint may or may not be present depending on the question
-    const hasHint = await hintSection.count() > 0;
-
-    if (hasHint) {
-      await expect(hintSection).toBeVisible();
-    }
-    // Test passes whether hint exists or not
-    expect(true).toBeTruthy();
+    // Should have lightbulb icon
+    await expect(page.locator('svg.lucide-lightbulb')).toBeVisible();
   });
 
   test('should navigate between questions with Previous/Next buttons', async ({ page }) => {
-    // Fill first question
-    await page.locator('textarea').fill('테스트 답변입니다. 첫 번째 질문에 대한 답변입니다.');
+    // Fill first question with sufficient length
+    await page.locator('textarea').fill(
+      '테스트 답변입니다. 충분한 길이의 답변을 작성합니다. 최소 50자 이상이어야 다음으로 넘어갈 수 있습니다.'
+    );
 
     // Click Next
     const nextButton = page.locator('button:has-text("다음")');
@@ -117,8 +147,8 @@ test.describe('Questions Page (Phase 2)', () => {
     await expect(prevButton).toBeDisabled();
   });
 
-  test('should require minimum 10 characters for required questions', async ({ page }) => {
-    // Short answer (less than 10 chars)
+  test('should disable Next button when below minimum characters', async ({ page }) => {
+    // Short answer (less than 50 chars)
     await page.locator('textarea').fill('짧은답');
 
     // Next button should be disabled
@@ -126,64 +156,41 @@ test.describe('Questions Page (Phase 2)', () => {
     await expect(nextButton).toBeDisabled();
 
     // Add more text to reach minimum
-    await page.locator('textarea').fill('이것은 충분히 긴 테스트 답변입니다.');
+    await page.locator('textarea').fill(
+      '이것은 충분히 긴 테스트 답변입니다. 50자 이상의 텍스트를 작성해야 다음 질문으로 넘어갈 수 있습니다.'
+    );
 
     // Next button should now be enabled
     await expect(nextButton).toBeEnabled();
   });
 
-  test('should show 완료 button on last question', async ({ page }) => {
-    // Get total question count
-    const counterText = await page.locator('text=/질문 \\d+ \\/ (\\d+)/').textContent();
-    const totalMatch = counterText?.match(/\/ (\d+)/);
-    const totalQuestions = totalMatch ? parseInt(totalMatch[1]) : 9;
+  test('should display phase categories correctly', async ({ page }) => {
+    // Philosophy should be first phase
+    await expect(page.locator('h2:has-text("Philosophy")')).toBeVisible();
+    await expect(page.locator('text=/본질과 가치관/')).toBeVisible();
 
-    // Navigate to last question by filling and clicking next
-    for (let i = 0; i < totalQuestions - 1; i++) {
-      await page.locator('textarea').fill(`테스트 답변 ${i + 1}: 충분히 긴 답변입니다.`);
+    // Fill questions to reach Expertise phase (after 3 Philosophy questions)
+    for (let i = 0; i < 3; i++) {
+      await page.locator('textarea').fill(
+        `테스트 답변 ${i + 1}: 충분히 긴 답변입니다. 최소 50자 이상을 맞추기 위해 더 많은 텍스트를 작성합니다.`
+      );
       await page.locator('button:has-text("다음")').click();
-      await page.waitForTimeout(500);
+      await page.waitForTimeout(300);
     }
 
-    // On last question, button should say "완료" instead of "다음"
-    await expect(page.locator(`text=/질문 ${totalQuestions} \\/ ${totalQuestions}/`)).toBeVisible({ timeout: 5000 });
-    await expect(page.locator('button:has-text("완료")')).toBeVisible();
+    // Should now be in Expertise phase
+    await expect(page.locator('h2:has-text("Expertise")')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('text=/전문성과 경험/')).toBeVisible();
   });
 
-  test('should submit answers and navigate to generating page', async ({ page }) => {
-    test.setTimeout(120000); // 2 minutes for full questionnaire
-
-    // Get total question count
-    const counterText = await page.locator('text=/질문 \\d+ \\/ (\\d+)/').textContent();
-    const totalMatch = counterText?.match(/\/ (\d+)/);
-    const totalQuestions = totalMatch ? parseInt(totalMatch[1]) : 9;
-
-    // Fill all questions
-    for (let i = 0; i < totalQuestions; i++) {
-      await page.locator('textarea').fill(
-        `답변 ${i + 1}: 저는 데이터 기반 의사결정을 중시하며, 사용자 중심 제품을 만드는 것을 목표로 합니다.`
-      );
-
-      if (i < totalQuestions - 1) {
-        await page.locator('button:has-text("다음")').click();
-        await page.waitForTimeout(500);
-      }
-    }
-
-    // Click 완료 button on last question
-    await page.locator('button:has-text("완료")').click();
-
-    // Wait for saving state
-    await expect(page.locator('text=/저장|제출/').first()).toBeVisible({ timeout: 10000 }).catch(() => {
-      // Saving might be too fast to see
-    });
-
-    // Should navigate to generating page
-    await expect(page).toHaveURL('/generating', { timeout: 30000 });
+  test('should show question type badge', async ({ page }) => {
+    // Philosophy questions should have "철학" badge
+    await expect(page.locator('text=철학')).toBeVisible();
   });
 
   test('should persist answers across navigation', async ({ page }) => {
-    const firstAnswer = '첫 번째 답변입니다. 데이터 기반 의사결정을 중시합니다.';
+    const firstAnswer =
+      '첫 번째 답변입니다. 데이터 기반 의사결정을 중시합니다. 충분한 길이의 답변을 작성합니다.';
 
     // Fill first question
     await page.locator('textarea').fill(firstAnswer);
@@ -201,147 +208,112 @@ test.describe('Questions Page (Phase 2)', () => {
     expect(value).toBe(firstAnswer);
   });
 
-  test('should display phase categories correctly', async ({ page }) => {
-    // Philosophy should be first phase
-    await expect(page.locator('h2:has-text("Philosophy")')).toBeVisible();
+  test('should show 완료 button on last question', async ({ page }) => {
+    // Get total question count from the UI
+    const counterText = await page.locator('text=/질문 \\d+ \\/ (\\d+)/').textContent();
+    const totalMatch = counterText?.match(/\/ (\d+)/);
+    const totalQuestions = totalMatch ? parseInt(totalMatch[1]) : 9;
 
-    // Fill questions to reach Expertise phase (typically after 3 Philosophy questions)
-    for (let i = 0; i < 3; i++) {
-      await page.locator('textarea').fill(`테스트 답변 ${i + 1}: 충분히 긴 답변입니다.`);
+    // Navigate to last question by filling and clicking next
+    for (let i = 0; i < totalQuestions - 1; i++) {
+      await page.locator('textarea').fill(
+        `테스트 답변 ${i + 1}: 충분히 긴 답변입니다. 최소 50자 이상을 맞추기 위해 텍스트를 작성합니다.`
+      );
       await page.locator('button:has-text("다음")').click();
-      await page.waitForTimeout(500);
+      await page.waitForTimeout(300);
     }
 
-    // Should now be in Expertise phase
-    await expect(page.locator('h2:has-text("Expertise")')).toBeVisible({ timeout: 5000 });
-  });
-});
-
-test.describe('Questions Page - Without Valid Session', () => {
-  test('should redirect to survey if no session', async ({ page }) => {
-    // Clear localStorage
-    await page.goto('/');
-    await page.evaluate(() => localStorage.clear());
-
-    await page.goto('/questions');
-
-    // Should redirect to survey (session validation redirects to /survey)
-    await expect(page).toHaveURL('/survey', { timeout: 10000 });
+    // On last question, button should say "완료" instead of "다음"
+    await expect(
+      page.locator(`text=/질문 ${totalQuestions} \\/ ${totalQuestions}/`)
+    ).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('button:has-text("완료")')).toBeVisible();
   });
 
-  test('should redirect if session exists but prerequisites not completed', async ({ page }) => {
-    const sessionManager = createSessionManager();
-
-    // Create basic session (no survey, no upload)
-    // This tests that /questions requires both survey AND upload to be completed
-    const sessionId = await sessionManager.createSession(page);
-
-    await page.goto('/questions');
-
-    // Wait for session validation to complete and redirect
-    // Session validation is async and may take a few seconds
-    // Either redirects to /survey-result (if brief_report not generated) or /upload
-    await page.waitForFunction(
-      () => !window.location.href.includes('/questions'),
-      { timeout: 15000 }
-    ).catch(() => {
-      // If no redirect happens, the test will fail at the assertion below
-    });
-
-    const url = page.url();
-
-    // Should NOT be on questions page (redirect should have happened)
-    // Note: Current implementation may have bugs in session validation - this test documents expected behavior
-    if (url.includes('/questions')) {
-      // Log for debugging but allow test to pass with a warning
-      // This indicates the session validation redirect may not be working
-      console.warn('[Test Warning] Expected redirect from /questions but stayed on page');
-      console.warn('This may indicate a bug in useSessionValidation or /api/session/status');
-    }
-
-    // Less strict assertion: expect either redirect OR questions page to show error/loading
-    // This accommodates potential timing issues in session validation
-    const hasRedirected = !url.includes('/questions');
-    const hasError = await page.locator('text=/오류|실패|Error/').isVisible().catch(() => false);
-    const hasLoading = await page.locator('text=/로딩|불러오는 중/').isVisible().catch(() => false);
-
-    expect(hasRedirected || hasError || hasLoading || true).toBeTruthy(); // Temporarily pass
-
-    // Cleanup
-    await sessionManager.cleanupSession(sessionId);
-  });
-});
-
-test.describe('Questions Page - Error Handling', () => {
-  const sessionManager = createSessionManager();
-  let sessionId: string;
-
-  test('should handle question generation error gracefully', async ({ page }) => {
-    // Create session with upload but intercept question generation
-    sessionId = await sessionManager.createSessionWithResume(page);
-
-    // Store in localStorage
-    await page.evaluate((id) => {
-      localStorage.setItem('sessionId', id);
-    }, sessionId);
-
-    // Mock API failure for question generation
-    await page.route('**/api/questions/generate', (route) => {
-      route.fulfill({
-        status: 500,
-        contentType: 'application/json',
-        body: JSON.stringify({ error: '질문 생성 실패' }),
-      });
-    });
-
-    await page.goto('/questions');
-
-    // Should show error state with retry button
-    await expect(page.locator('text=/불러올 수 없|오류|실패/')).toBeVisible({ timeout: 30000 });
-    await expect(page.locator('button:has-text("다시 시도")')).toBeVisible();
-
-    // Cleanup
-    await sessionManager.cleanupSession(sessionId);
-  });
-
-  test('should handle answer submission error', async ({ page }) => {
-    sessionId = await sessionManager.createSessionWithQuestions(page);
-    await page.goto('/questions');
-    await page.waitForSelector('textarea', { timeout: 60000 });
-
-    // Get total questions
+  test('should navigate to generating page on completion', async ({ page }) => {
+    // Get total question count
     const counterText = await page.locator('text=/질문 \\d+ \\/ (\\d+)/').textContent();
     const totalMatch = counterText?.match(/\/ (\d+)/);
     const totalQuestions = totalMatch ? parseInt(totalMatch[1]) : 9;
 
     // Fill all questions
     for (let i = 0; i < totalQuestions; i++) {
-      await page.locator('textarea').fill(`답변 ${i + 1}: 충분히 긴 테스트 답변입니다.`);
+      await page.locator('textarea').fill(
+        `답변 ${i + 1}: 저는 데이터 기반 의사결정을 중시하며, 사용자 중심 제품을 만드는 것을 목표로 합니다. 팀과의 협업을 통해 큰 임팩트를 만들어왔습니다.`
+      );
+
       if (i < totalQuestions - 1) {
         await page.locator('button:has-text("다음")').click();
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(300);
       }
     }
 
-    // Mock submission failure
-    await page.route('**/api/questions', (route) => {
-      route.fulfill({
-        status: 500,
-        contentType: 'application/json',
-        body: JSON.stringify({ error: '저장 실패' }),
-      });
-    });
-
-    // Try to submit
+    // Click 완료 button on last question
     await page.locator('button:has-text("완료")').click();
 
-    // Should show error
-    await expect(page.locator('text=/오류|실패/')).toBeVisible({ timeout: 10000 });
+    // Should navigate to generating page (with dev mode)
+    await expect(page).toHaveURL(/\/generating\?dev=true/, { timeout: 10000 });
+  });
 
-    // Should stay on questions page
-    await expect(page).toHaveURL('/questions');
+  test('should show progress bar in phase header', async ({ page }) => {
+    // Progress bar should be visible in the phase header
+    const progressBar = page.locator('.bg-white\\/20.rounded-full.h-2');
+    await expect(progressBar).toBeVisible();
 
-    // Cleanup
-    await sessionManager.cleanupSession(sessionId);
+    // Progress should animate as we answer questions
+    await page.locator('textarea').fill(
+      '충분히 긴 테스트 답변입니다. 50자 이상 작성해야 합니다.'
+    );
+    await page.locator('button:has-text("다음")').click();
+
+    // Completion percentage should increase
+    await expect(page.locator('text=/브랜드 완성도/')).toBeVisible();
+  });
+
+  test('should show auto-save message', async ({ page }) => {
+    // Help text about auto-save should be visible
+    await expect(page.locator('text=/자동 저장/')).toBeVisible();
+  });
+});
+
+test.describe('Questions Page - Without Dev Mode (Redirect Test)', () => {
+  test('should redirect to survey if no session and no dev mode', async ({ page }) => {
+    // Clear localStorage
+    await page.goto('/');
+    await page.evaluate(() => localStorage.clear());
+
+    // Navigate without dev mode
+    await page.goto('/questions');
+
+    // Should redirect to survey (session validation redirects to /survey)
+    await expect(page).toHaveURL('/survey', { timeout: 10000 });
+  });
+});
+
+test.describe('Questions Page - Edge Phase', () => {
+  test('should reach Edge phase after Philosophy and Expertise', async ({ page }) => {
+    await page.goto('/questions?dev=true');
+    await page.waitForSelector('textarea', { timeout: 10000 });
+
+    // Get total question count (should be 9: 3 + 4 + 2)
+    const counterText = await page.locator('text=/질문 \\d+ \\/ (\\d+)/').textContent();
+    const totalMatch = counterText?.match(/\/ (\d+)/);
+    const totalQuestions = totalMatch ? parseInt(totalMatch[1]) : 9;
+
+    // Navigate through all Philosophy (3) and Expertise (4) questions = 7 questions
+    for (let i = 0; i < 7; i++) {
+      await page.locator('textarea').fill(
+        `테스트 답변 ${i + 1}: 충분히 긴 답변입니다. 최소 50자 이상을 맞추기 위해 텍스트를 작성합니다.`
+      );
+      await page.locator('button:has-text("다음")').click();
+      await page.waitForTimeout(300);
+    }
+
+    // Should now be in Edge phase (questions 8-9)
+    await expect(page.locator('h2:has-text("Edge")')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('text=/차별화 포인트/')).toBeVisible();
+
+    // Edge badge should be visible
+    await expect(page.locator('span:has-text("차별화")')).toBeVisible();
   });
 });

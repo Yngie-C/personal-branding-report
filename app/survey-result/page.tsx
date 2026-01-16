@@ -4,7 +4,14 @@ import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from "recharts";
+import {
+  DynamicRadarChart as RadarChart,
+  DynamicRadar as Radar,
+  DynamicPolarGrid as PolarGrid,
+  DynamicPolarAngleAxis as PolarAngleAxis,
+  DynamicPolarRadiusAxis as PolarRadiusAxis,
+  DynamicResponsiveContainer as ResponsiveContainer,
+} from "@/components/charts/DynamicRadarChart";
 import { TrendingUp, Award, AlertCircle, ArrowRight, Sparkles, Share2, Globe, Mail, CheckCircle, Clock, Lightbulb, MessageSquare, Copy, Bell } from "lucide-react";
 import { BriefAnalysis, CategoryLabels, SurveyAnswer } from "@/types/survey";
 import {

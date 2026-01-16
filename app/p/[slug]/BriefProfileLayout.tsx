@@ -2,7 +2,14 @@
 
 import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
+import {
+  DynamicRadarChart as RadarChart,
+  DynamicRadar as Radar,
+  DynamicPolarGrid as PolarGrid,
+  DynamicPolarAngleAxis as PolarAngleAxis,
+  DynamicPolarRadiusAxis as PolarRadiusAxis,
+  DynamicResponsiveContainer as ResponsiveContainer,
+} from '@/components/charts/DynamicRadarChart';
 import { Button } from '@/components/ui/button';
 import { TrendingUp, Clock, Sparkles, Share2, Globe, CheckCircle, Lightbulb, MessageSquare } from 'lucide-react';
 import { CategoryLabels, SurveyCategory } from '@/types/survey';

@@ -1,10 +1,13 @@
 'use client';
 
-import { useState } from 'react';
-import { motion } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Lightbulb } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ChevronLeft, ChevronRight, Lightbulb, BookOpen, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { AIGuidance } from './AIGuidance';
+import { LazyAIGuidance as AIGuidance } from '@/components/lazy/LazyAIGuidance';
+import { LazyCompletionScore as CompletionScore } from '@/components/lazy/LazyCompletionScore';
+import { KeywordHighlighter } from './KeywordHighlighter';
+import { analyzeAnswer } from '@/lib/questions/answer-analyzer';
 import type { QuestionPhaseMetadata } from '@/types/brand';
 
 interface FocusModeQuestionProps {
@@ -15,6 +18,11 @@ interface FocusModeQuestionProps {
     required: boolean;
     questionType?: 'soul' | 'expertise' | 'edge' | 'legacy';
     aiGuidance?: string;
+    // Phase 2-1 확장 필드
+    exampleAnswer?: string;
+    minCharacters?: number;
+    recommendedCharacters?: number;
+    keywords?: string[];  // 핵심 키워드 (답변 품질 분석용)
   };
   phaseMetadata: QuestionPhaseMetadata;
   currentIndex: number;
@@ -26,6 +34,7 @@ interface FocusModeQuestionProps {
   canGoNext: boolean;
   canGoPrevious: boolean;
   isLastQuestion: boolean;
+  isDevMode?: boolean;
 }
 
 /**
@@ -61,9 +70,32 @@ export function FocusModeQuestion({
   canGoNext,
   canGoPrevious,
   isLastQuestion,
+  isDevMode = false,
 }: FocusModeQuestionProps) {
   const [showGuidance, setShowGuidance] = useState(false);
   const [hasShownGuidance, setHasShownGuidance] = useState(false);
+  const [showExampleAnswer, setShowExampleAnswer] = useState(false);
+
+  // 글자수 기준 (Phase 2-1)
+  const minChars = question.minCharacters || 50;
+  const recommendedChars = question.recommendedCharacters || 150;
+  const currentLength = answer.trim().length;
+
+  // 답변 분석 결과 (실시간 업데이트)
+  const analysisResult = useMemo(() => {
+    return analyzeAnswer(answer, {
+      minCharacters: minChars,
+      recommendedCharacters: recommendedChars,
+      keywords: question.keywords,
+    });
+  }, [answer, minChars, recommendedChars, question.keywords]);
+
+  // 글자수 색상 함수
+  const getCharCountColor = () => {
+    if (currentLength < minChars) return 'text-red-500';
+    if (currentLength < recommendedChars) return 'text-yellow-600';
+    return 'text-green-600';
+  };
 
   const handleAnswerChange = (value: string) => {
     onAnswerChange(value);
@@ -100,6 +132,15 @@ export function FocusModeQuestion({
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-indigo-200/20 rounded-full blur-3xl" />
 
       <div className="max-w-4xl mx-auto px-4 relative z-10">
+        {/* Dev Mode Banner */}
+        {isDevMode && (
+          <div className="mb-4 p-3 bg-yellow-100/80 backdrop-blur-sm border border-yellow-400 rounded-lg">
+            <p className="text-sm text-yellow-800 font-medium">
+              [Dev Mode] Mock 질문 데이터를 표시합니다. 실제 API 호출 없이 테스트할 수 있습니다.
+            </p>
+          </div>
+        )}
+
         {/* Phase Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -167,8 +208,19 @@ export function FocusModeQuestion({
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.95 }}
           transition={{ duration: 0.4 }}
-          className="bg-white/70 backdrop-blur-xl rounded-2xl shadow-xl shadow-indigo-500/10 border border-white/40 p-8 mb-6"
+          className="bg-white/70 backdrop-blur-xl rounded-2xl shadow-xl shadow-indigo-500/10 border border-white/40 p-8 mb-6 relative"
         >
+          {/* Completion Score - Top Right */}
+          <div className="absolute top-4 right-4">
+            <CompletionScore
+              score={analysisResult.totalScore}
+              grade={analysisResult.grade}
+              size="md"
+              showBadge={true}
+              animated={true}
+            />
+          </div>
+
           {/* Question Type Badge */}
           {question.questionType && (
             <div className="mb-4">
@@ -197,13 +249,54 @@ export function FocusModeQuestion({
             )}
           </h3>
 
-          {/* Hint */}
+          {/* Hint with Keyword Highlighting */}
           {question.hint && (
-            <div className="mb-6 flex items-start gap-2 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="mb-4 flex items-start gap-2 bg-blue-50 border border-blue-200 rounded-lg p-4">
               <Lightbulb className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
               <p className="text-sm text-blue-800">
-                {question.hint}
+                {question.keywords && question.keywords.length > 0 ? (
+                  <KeywordHighlighter
+                    text={question.hint}
+                    keywords={question.keywords}
+                    highlightColor="indigo"
+                  />
+                ) : (
+                  question.hint
+                )}
               </p>
+            </div>
+          )}
+
+          {/* Example Answer Toggle (Phase 2-1) */}
+          {question.exampleAnswer && (
+            <div className="mb-6">
+              <button
+                onClick={() => setShowExampleAnswer(!showExampleAnswer)}
+                className="flex items-center gap-2 text-sm text-indigo-600 hover:text-indigo-800 transition-colors"
+              >
+                <BookOpen className="w-4 h-4" />
+                <span>답변 예시 보기</span>
+                <ChevronDown
+                  className={`w-4 h-4 transition-transform ${showExampleAnswer ? 'rotate-180' : ''}`}
+                />
+              </button>
+              <AnimatePresence>
+                {showExampleAnswer && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="mt-3 p-4 bg-indigo-50 border border-indigo-200 rounded-lg">
+                      <p className="text-sm text-indigo-800 leading-relaxed">
+                        {question.exampleAnswer}
+                      </p>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           )}
 
@@ -216,17 +309,42 @@ export function FocusModeQuestion({
               className="w-full min-h-[200px] p-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none text-gray-900 placeholder:text-gray-400"
               autoFocus
             />
-            <div className="mt-2 text-right">
-              <span className={`text-sm ${
-                answer.trim().length < 20
-                  ? 'text-gray-400'
-                  : answer.trim().length < 50
-                  ? 'text-blue-600'
-                  : 'text-green-600'
-              }`}>
-                {answer.trim().length} 자
+
+            {/* Character Count & Guidelines (Phase 2-1) */}
+            <div className="mt-3 flex justify-between items-center text-sm">
+              <span className="text-gray-500">
+                최소 {minChars}자 | 권장 {recommendedChars}자
+              </span>
+              <span className={getCharCountColor()}>
+                {currentLength}자
               </span>
             </div>
+
+            {/* Warning if below minimum */}
+            {currentLength > 0 && currentLength < minChars && (
+              <p className="mt-2 text-xs text-red-500">
+                최소 {minChars}자 이상 작성해주세요. ({minChars - currentLength}자 부족)
+              </p>
+            )}
+
+            {/* Matched Keywords Feedback */}
+            {question.keywords && question.keywords.length > 0 && analysisResult.matchedKeywords.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: -5 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mt-3 flex flex-wrap items-center gap-1.5"
+              >
+                <span className="text-xs text-gray-500 mr-1">감지된 키워드:</span>
+                {analysisResult.matchedKeywords.map((keyword, idx) => (
+                  <span
+                    key={idx}
+                    className="text-xs px-2 py-0.5 bg-green-100 text-green-700 border border-green-200 rounded-full font-medium"
+                  >
+                    {keyword}
+                  </span>
+                ))}
+              </motion.div>
+            )}
           </div>
 
           {/* Navigation Buttons */}

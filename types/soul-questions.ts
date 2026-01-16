@@ -10,6 +10,20 @@ export enum SoulQuestionCategory {
 }
 
 /**
+ * 템플릿 Variant 타입
+ */
+export type TemplateVariant = 'balanced' | 'spiked' | 'mixed';
+
+/**
+ * Variant별 질문 변형
+ */
+export interface VariantOverride {
+  variant: TemplateVariant;
+  question?: string;           // 대체 질문 텍스트
+  hint?: string;               // 대체 힌트
+}
+
+/**
  * Soul Question 인터페이스
  */
 export interface SoulQuestion {
@@ -19,6 +33,25 @@ export interface SoulQuestion {
   hint?: string;
   // PSA 매칭에 사용될 카테고리들
   matchedCategories?: SurveyCategory[];  // 이 질문이 어떤 PSA 카테고리와 매칭되는지
+
+  // Phase 2-1 확장 필드
+  exampleAnswer?: string;              // 예시 답변 (50-80자)
+  minCharacters?: number;              // 최소 글자수 (기본: 50)
+  recommendedCharacters?: number;      // 권장 글자수 (기본: 150)
+  variantOverrides?: VariantOverride[];  // variant별 질문 변형
+}
+
+/**
+ * Expertise/Edge 템플릿 (LLM 참조용)
+ */
+export interface QuestionTemplate {
+  id: string;                  // "exp_primary_1", "edge_diff_1"
+  type: 'expertise' | 'edge';
+  promptTemplate: string;      // LLM 프롬프트에 사용될 템플릿
+  hint: string;
+  exampleAnswer?: string;
+  minCharacters?: number;
+  recommendedCharacters?: number;
 }
 
 /**

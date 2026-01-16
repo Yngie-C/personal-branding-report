@@ -138,7 +138,12 @@ export async function GET() {
       categoryDetails: categoryDetails.sort((a, b) => b.avgScore - a.avgScore),
     };
 
-    return NextResponse.json({ data: response });
+    // Add caching headers for CDN
+    return NextResponse.json({ data: response }, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400',
+      },
+    });
   } catch (error) {
     console.error("Statistics API error:", error);
     return NextResponse.json({
